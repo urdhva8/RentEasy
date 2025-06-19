@@ -120,15 +120,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfileImage = async (imageUrl: string): Promise<boolean> => {
     if (!user) return false;
-    // setLoading(true); // This might be for a different kind of loading state (e.g., image upload in progress)
-    const updatedUser = apiUpdateUserProfileImage(user.id, imageUrl);
-    if (updatedUser) {
-      setUser(updatedUser);
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
-      // setLoading(false);
+    const rawUpdatedUser = apiUpdateUserProfileImage(user.id, imageUrl);
+    if (rawUpdatedUser) {
+      // Create a new object reference to ensure React detects the change
+      const newClonedUser = { ...rawUpdatedUser };
+      setUser(newClonedUser);
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(newClonedUser));
       return true;
     }
-    // setLoading(false);
     return false;
   };
 

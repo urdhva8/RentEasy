@@ -40,6 +40,8 @@ export function AddPropertyForm() {
   const { toast } = useToast();
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+
 
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertySchema),
@@ -60,34 +62,43 @@ export function AddPropertyForm() {
       toast({ title: "Error", description: "You must be an owner to add a property.", variant: "destructive" });
       return;
     }
-    setIsLoading(true);
-
-    // Convert selected files to Data URIs
-    const imageUrls = await Promise.all(
-      imageFiles.map(file => {
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve(reader.result as string);
-          };
-          reader.onerror = (error) => {
-            reject(error);
-          };
-          reader.readAsDataURL(file);
+    
+    setIsLoading(true); // General loading for the whole submission
+    
+    let imageUrls: string[] | null = [];
+    if (imageFiles.length > 0) {
+      setIsProcessingImages(true); // Specific for image conversion
+      imageUrls = await Promise.all(
+        imageFiles.map(file => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              resolve(reader.result as string);
+            };
+            reader.onerror = (error) => {
+              console.error("File reading error:", error);
+              reject(new Error(`Failed to read file: ${file.name}`));
+            };
+            reader.readAsDataURL(file);
+          });
+        })
+      ).catch(error => {
+        console.error("Error processing files:", error);
+        toast({
+          title: "Image Processing Error",
+          description: "Could not process one or more images. Please ensure files are valid and try again.",
+          variant: "destructive",
         });
-      })
-    ).catch(error => {
-      console.error("Error reading files:", error);
-      toast({
-        title: "Image Processing Error",
-        description: "Could not process one or more images. Please try again.",
-        variant: "destructive",
+        setIsProcessingImages(false);
+        setIsLoading(false);
+        return null; 
       });
-      setIsLoading(false);
-      return null; 
-    });
+      setIsProcessingImages(false); // Done with image processing
+    }
 
-    if (!imageUrls) { // Early exit if file reading failed
+
+    if (!imageUrls && imageFiles.length > 0) { // Early exit if file reading failed for uploaded files
+        setIsLoading(false);
         return;
     }
     
@@ -96,7 +107,7 @@ export function AddPropertyForm() {
       ownerId: user.id,
       ownerName: user.name,
       ...data,
-      images: imageUrls.length > 0 ? imageUrls : ["https://placehold.co/600x400.png?text=No+Image+Provided"],
+      images: imageUrls && imageUrls.length > 0 ? imageUrls : ["https://placehold.co/600x400.png?text=No+Image+Provided"],
     };
 
     addProperty(newProperty); // Add to mock data
@@ -181,9 +192,27 @@ export function AddPropertyForm() {
               <FormMessage /> 
             </FormItem>
 
-            <Button type="submit" className="w-full btn-gradient-primary font-code py-3 text-base" disabled={isLoading}>
-              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <PlusCircle className="mr-2 h-5 w-5" />}
-              Add Property
+            <Button 
+              type="submit" 
+              className="w-full btn-gradient-primary font-code py-3 text-base" 
+              disabled={isLoading || isProcessingImages}
+            >
+              {isProcessingImages ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Processing Images...
+                </>
+              ) : isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Adding Property...
+                </>
+              ) : (
+                <>
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Add Property
+                </>
+              )}
             </Button>
           </form>
         </Form>
