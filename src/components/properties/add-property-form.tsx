@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { ImageUploader } from "./image-uploader";
-import { useState } from "react";
+import { useState, useCallback } from "react"; // Added useCallback
 import { useAuth } from "@/contexts/auth-context";
 import { addProperty } from "@/lib/mock-data"; 
 import { useRouter } from "next/navigation";
@@ -53,9 +53,9 @@ export function AddPropertyForm() {
     },
   });
 
-  const handleImagesChange = (files: File[]) => {
+  const handleImagesChange = useCallback((files: File[]) => {
     setImageFiles(files);
-  };
+  }, []); // Empty dependency array means this function reference is stable
 
   async function onSubmit(data: PropertyFormValues) {
     if (!user || user.role !== "owner") {
@@ -63,11 +63,11 @@ export function AddPropertyForm() {
       return;
     }
     
-    setIsLoading(true); // General loading for the whole submission
+    setIsLoading(true); 
     
     let imageUrls: string[] | null = [];
     if (imageFiles.length > 0) {
-      setIsProcessingImages(true); // Specific for image conversion
+      setIsProcessingImages(true); 
       imageUrls = await Promise.all(
         imageFiles.map(file => {
           return new Promise<string>((resolve, reject) => {
@@ -93,24 +93,24 @@ export function AddPropertyForm() {
         setIsLoading(false);
         return null; 
       });
-      setIsProcessingImages(false); // Done with image processing
+      setIsProcessingImages(false); 
     }
 
 
-    if (!imageUrls && imageFiles.length > 0) { // Early exit if file reading failed for uploaded files
+    if (!imageUrls && imageFiles.length > 0) { 
         setIsLoading(false);
         return;
     }
     
     const newProperty: Property = {
-      id: String(Date.now()), // Mock ID
+      id: String(Date.now()), 
       ownerId: user.id,
       ownerName: user.name,
       ...data,
       images: imageUrls && imageUrls.length > 0 ? imageUrls : ["https://placehold.co/600x400.png?text=No+Image+Provided"],
     };
 
-    addProperty(newProperty); // Add to mock data
+    addProperty(newProperty); 
     
     toast({
       title: "Property Added!",
