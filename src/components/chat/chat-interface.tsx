@@ -12,7 +12,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from 'date-fns';
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { io, type Socket } from 'socket.io-client';
 
 interface ChatInterfaceProps {
   conversationId: string;
@@ -23,7 +22,6 @@ export function ChatInterface({ conversationId, currentUser }: ChatInterfaceProp
   const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
     const foundConversation = MOCK_CHAT_CONVERSATIONS.find(c => c.id === conversationId);
@@ -34,66 +32,9 @@ export function ChatInterface({ conversationId, currentUser }: ChatInterfaceProp
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [conversation?.messages]);
 
-  useEffect(() => {
-    // Initialize Socket.IO connection
-    const newSocket = io({ 
-        path: '/api/socket', 
-        addTrailingSlash: false, 
-        transports: ['websocket', 'polling'] // Explicitly define transports
-    });
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
-      console.log('Connected to Socket.IO server:', newSocket.id);
-      if (conversationId) {
-        newSocket.emit('joinConversation', conversationId);
-      }
-    });
-
-    newSocket.on('receiveMessage', (message: ChatMessage) => {
-      // Only process if the message is for the current conversation AND not from the current user
-      if (message.chatId === conversationId && message.senderId !== currentUser.id) {
-        const updatedConv = addChatMessage(conversationId, message); // addChatMessage handles duplicates
-        if (updatedConv) {
-          setConversation(prevConv => {
-            // Ensure we are updating the correct conversation if it changed
-            if (prevConv && prevConv.id === conversationId) {
-              return updatedConv;
-            }
-            return prevConv;
-          });
-        }
-      }
-    });
-    
-    newSocket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message, err.cause);
-    });
-
-    newSocket.on('disconnect', (reason) => {
-      console.log('Disconnected from Socket.IO server:', reason);
-    });
-    
-    // If conversationId changes, re-join the new room
-    // This is important if the component stays mounted but conversationId prop changes
-    if (newSocket.connected && conversationId) {
-        newSocket.emit('joinConversation', conversationId);
-    }
-
-
-    return () => {
-      console.log('Disconnecting socket...', newSocket.id);
-      newSocket.disconnect();
-      setSocket(null);
-    };
-  }, [conversationId, currentUser.id]); // currentUser.id to ensure correct sender check in 'receiveMessage'
-
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() === "" || !conversation || !socket || !socket.connected) {
-        if(!socket?.connected) console.warn("Socket not connected, cannot send message.");
-        return;
-    }
+    if (newMessage.trim() === "" || !conversation) return;
 
     const message: ChatMessage = {
       id: String(Date.now()) + currentUser.id.slice(0,5), // Slightly more unique ID
@@ -103,15 +44,13 @@ export function ChatInterface({ conversationId, currentUser }: ChatInterfaceProp
       text: newMessage,
       timestamp: Date.now(),
     };
-
-    // Optimistically update UI and persist for sender
+    
+    // Update local mock data which should also update localStorage via saveMockChatConversations
     const updatedConv = addChatMessage(conversation.id, message);
     if (updatedConv) {
-      setConversation(updatedConv); // This updates the local state which triggers re-render
+        setConversation(updatedConv); // Use the returned updated conversation
     }
     
-    // Emit message to server
-    socket.emit('sendMessage', { conversationId: conversation.id, message });
     setNewMessage("");
   };
 
@@ -173,13 +112,11 @@ export function ChatInterface({ conversationId, currentUser }: ChatInterfaceProp
             placeholder="Type your message..."
             className="flex-1 font-code"
             aria-label="Chat message input"
-            disabled={!socket?.connected}
           />
-          <Button type="submit" className="btn-accent font-code" aria-label="Send message" disabled={!socket?.connected}>
+          <Button type="submit" className="btn-accent font-code" aria-label="Send message">
             <Send className="h-5 w-5" />
           </Button>
         </div>
-        {!socket?.connected && <p className="text-xs text-destructive mt-1">Chat disconnected. Attempting to reconnect...</p>}
       </form>
     </div>
   );
