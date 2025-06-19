@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, ChangeEvent, DragEvent } from "react";
+import { useState, ChangeEvent, DragEvent, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -12,10 +13,27 @@ interface ImageUploaderProps {
   initialImageUrls?: string[]; // For editing existing properties
 }
 
+interface PreviewImage {
+  id: string; // Unique ID for key prop
+  url: string; // blob: URL for new files, http/data for initial
+  file?: File; // Original File object for new uploads
+  isInitial: boolean;
+}
+
 export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUploaderProps) {
-  const [imagePreviews, setImagePreviews] = useState<string[]>(initialImageUrls);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    // Initialize previews from initialImageUrls
+    const initialPreviews: PreviewImage[] = initialImageUrls.map((url, index) => ({
+      id: `initial-${index}-${Date.now()}`,
+      url: url,
+      isInitial: true,
+    }));
+    setPreviewImages(initialPreviews);
+  }, [initialImageUrls]);
+
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -25,12 +43,20 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
   };
   
   const processFiles = (filesArray: File[]) => {
-    const newImageFiles = [...imageFiles, ...filesArray];
-    setImageFiles(newImageFiles);
-    onImagesChange(newImageFiles);
+    const newFilePreviews: PreviewImage[] = filesArray.map(file => ({
+      id: `${file.name}-${file.lastModified}-${Math.random()}`,
+      url: URL.createObjectURL(file),
+      file: file,
+      isInitial: false,
+    }));
 
-    const newPreviews = filesArray.map(file => URL.createObjectURL(file));
-    setImagePreviews(prev => [...prev, ...newPreviews]);
+    setPreviewImages(prev => {
+      const updatedPreviews = [...prev, ...newFilePreviews];
+      // Notify parent about all *new* files
+      const newFiles = updatedPreviews.filter(p => !p.isInitial && p.file).map(p => p.file!);
+      onImagesChange(newFiles);
+      return updatedPreviews;
+    });
   };
 
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
@@ -52,31 +78,21 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
     }
   };
 
-  const removeImage = (index: number) => {
-    const newPreviews = [...imagePreviews];
-    const newFiles = [...imageFiles];
-    
-    // Check if the image to remove is an initial URL or a newly uploaded file preview
-    if (index < initialImageUrls.length && imagePreviews[index].startsWith('http')) {
-        // This logic might need adjustment if initialImageUrls are mixed with new files in imagePreviews
-        // For simplicity, this assumes initial URLs are at the start and not mixed with File object URLs.
-        // If initial URLs can be removed, you'll need a way to signal this (e.g., separate state for removed initial URLs).
-        // For now, let's assume we are only removing newly added files or their previews.
-        // This part needs careful handling if initial URLs should be removable and affect 'imageFiles'.
-        // The current implementation is more geared towards adding new files.
-    } else {
-      // Adjust index if initial URLs are present and we are removing a newly added file
-      const fileIndexToRemove = index - initialImageUrls.filter(url => !url.startsWith('blob:')).length;
-      if (fileIndexToRemove >= 0 && fileIndexToRemove < newFiles.length) {
-        newFiles.splice(fileIndexToRemove, 1);
+  const removeImage = (idToRemove: string) => {
+    setPreviewImages(prev => {
+      const updatedPreviews = prev.filter(p => p.id !== idToRemove);
+      
+      // Revoke blob URL if it was a newly added file that's now removed
+      const removedItem = prev.find(p => p.id === idToRemove);
+      if (removedItem && !removedItem.isInitial && removedItem.url.startsWith('blob:')) {
+        URL.revokeObjectURL(removedItem.url);
       }
-    }
 
-    newPreviews.splice(index, 1);
-    
-    setImagePreviews(newPreviews);
-    setImageFiles(newFiles);
-    onImagesChange(newFiles); // Notify parent about the change in files
+      // Notify parent about the change in the list of *new* files
+      const newFiles = updatedPreviews.filter(p => !p.isInitial && p.file).map(p => p.file!);
+      onImagesChange(newFiles);
+      return updatedPreviews;
+    });
   };
 
 
@@ -105,14 +121,14 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
         <p className="text-xs text-muted-foreground font-body">PNG, JPG, GIF up to 10MB</p>
       </div>
 
-      {imagePreviews.length > 0 && (
+      {previewImages.length > 0 && (
         <ScrollArea className="w-full whitespace-nowrap rounded-md border">
           <div className="flex w-max space-x-4 p-4">
-            {imagePreviews.map((src, index) => (
-              <div key={index} className="relative group w-32 h-32 flex-shrink-0">
+            {previewImages.map((img) => (
+              <div key={img.id} className="relative group w-32 h-32 flex-shrink-0">
                 <Image
-                  src={src}
-                  alt={`Preview ${index + 1}`}
+                  src={img.url}
+                  alt={`Preview ${img.file?.name || 'initial image'}`}
                   layout="fill"
                   objectFit="cover"
                   className="rounded-md"
@@ -121,7 +137,7 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
                   variant="destructive"
                   size="icon"
                   className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={(e) => { e.stopPropagation(); removeImage(index); }}
+                  onClick={(e) => { e.stopPropagation(); removeImage(img.id); }}
                   aria-label="Remove image"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -142,3 +158,4 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
     </div>
   );
 }
+
