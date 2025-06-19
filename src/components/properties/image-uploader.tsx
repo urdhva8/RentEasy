@@ -24,8 +24,8 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Effect to initialize previews from initialImageUrls prop
   useEffect(() => {
-    // Initialize previews from initialImageUrls
     const initialPreviews: PreviewImage[] = initialImageUrls.map((url, index) => ({
       id: `initial-${index}-${Date.now()}`,
       url: url,
@@ -35,13 +35,17 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
   }, [initialImageUrls]);
 
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      processFiles(Array.from(files));
-    }
-  };
-  
+  // Effect to notify parent when the list of actual (non-initial) files changes
+  useEffect(() => {
+    const newFiles = previewImages
+      .filter(p => !p.isInitial && p.file)
+      .map(p => p.file!);
+    onImagesChange(newFiles);
+  // Adding onImagesChange to dependency array as it's an external function used in the effect.
+  // If it's not memoized in the parent, this effect might run more often, but it's correct practice.
+  }, [previewImages, onImagesChange]);
+
+
   const processFiles = (filesArray: File[]) => {
     const newFilePreviews: PreviewImage[] = filesArray.map(file => ({
       id: `${file.name}-${file.lastModified}-${Math.random()}`,
@@ -51,14 +55,30 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
     }));
 
     setPreviewImages(prev => {
-      const updatedPreviews = [...prev, ...newFilePreviews];
-      // Notify parent about all *new* files
-      const newFiles = updatedPreviews.filter(p => !p.isInitial && p.file).map(p => p.file!);
-      onImagesChange(newFiles);
+      // Filter out any existing non-initial previews to avoid duplicates if user selects same file again
+      // and ensure initial previews are preserved unless explicitly removed.
+      const existingInitialPreviews = prev.filter(p => p.isInitial);
+      const existingNewFilePreviews = prev.filter(p => !p.isInitial);
+      
+      // Filter out any files from newFilePreviews that might already be in existingNewFilePreviews (by name and size, for example)
+      // For simplicity here, we'll just append, but a more robust solution might check for duplicates.
+      const updatedPreviews = [...existingInitialPreviews, ...existingNewFilePreviews, ...newFilePreviews];
       return updatedPreviews;
     });
+    // The onImagesChange call is now handled by the useEffect hook that watches previewImages
   };
 
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      processFiles(Array.from(files));
+    }
+     // Reset file input to allow re-uploading the same file if needed
+     if (event.target) {
+        event.target.value = "";
+    }
+  };
+  
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(true);
@@ -79,20 +99,15 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
   };
 
   const removeImage = (idToRemove: string) => {
-    setPreviewImages(prev => {
-      const updatedPreviews = prev.filter(p => p.id !== idToRemove);
-      
-      // Revoke blob URL if it was a newly added file that's now removed
-      const removedItem = prev.find(p => p.id === idToRemove);
-      if (removedItem && !removedItem.isInitial && removedItem.url.startsWith('blob:')) {
-        URL.revokeObjectURL(removedItem.url);
-      }
+    const removedItem = previewImages.find(p => p.id === idToRemove);
+    
+    setPreviewImages(prev => prev.filter(p => p.id !== idToRemove));
+    // The onImagesChange call is now handled by the useEffect hook
 
-      // Notify parent about the change in the list of *new* files
-      const newFiles = updatedPreviews.filter(p => !p.isInitial && p.file).map(p => p.file!);
-      onImagesChange(newFiles);
-      return updatedPreviews;
-    });
+    // Revoke blob URL if it was a newly added file that's now removed
+    if (removedItem && !removedItem.isInitial && removedItem.url.startsWith('blob:')) {
+      URL.revokeObjectURL(removedItem.url);
+    }
   };
 
 
@@ -129,8 +144,9 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
                 <Image
                   src={img.url}
                   alt={`Preview ${img.file?.name || 'initial image'}`}
-                  layout="fill"
-                  objectFit="cover"
+                  fill // Changed from layout="fill" objectFit="cover" to just fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Example sizes, adjust as needed
+                  style={{ objectFit: "cover" }} // Replaces objectFit prop
                   className="rounded-md"
                 />
                 <Button
@@ -158,4 +174,3 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
     </div>
   );
 }
-
