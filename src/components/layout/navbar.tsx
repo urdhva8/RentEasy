@@ -115,7 +115,7 @@ export function Navbar() {
                   <span className="sr-only">Open menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] sm:w-[340px] flex flex-col p-0">
+              <SheetContent side="left" className="dark w-[300px] sm:w-[340px] flex flex-col p-0">
                 <SheetHeader className="p-6 pb-2">
                    <SheetTitle className="text-left">
                     <RentEaseLogo />
