@@ -62,36 +62,49 @@ export function AddPropertyForm() {
     }
     setIsLoading(true);
 
-    // Simulate image upload and getting URLs
+    // Convert selected files to Data URIs
     const imageUrls = await Promise.all(
       imageFiles.map(file => {
-        return new Promise<string>((resolve) => {
+        return new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => {
             resolve(reader.result as string);
           };
+          reader.onerror = (error) => {
+            reject(error);
+          };
           reader.readAsDataURL(file);
         });
       })
-    );
+    ).catch(error => {
+      console.error("Error reading files:", error);
+      toast({
+        title: "Image Processing Error",
+        description: "Could not process one or more images. Please try again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return null; 
+    });
+
+    if (!imageUrls) { // Early exit if file reading failed
+        return;
+    }
     
     const newProperty: Property = {
       id: String(Date.now()), // Mock ID
       ownerId: user.id,
       ownerName: user.name,
       ...data,
-      images: imageUrls.length > 0 ? imageUrls : ["https://placehold.co/600x400.png?text=No+Image+Provided"], // Add a default placeholder if no images uploaded
+      images: imageUrls.length > 0 ? imageUrls : ["https://placehold.co/600x400.png?text=No+Image+Provided"],
     };
 
     addProperty(newProperty); // Add to mock data
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
     toast({
       title: "Property Added!",
       description: `"${data.name}" has been successfully listed.`,
-      variant: "default", // Explicitly set variant for success, if not default
+      variant: "default",
     });
     setIsLoading(false);
     router.push("/properties/my-listings");
