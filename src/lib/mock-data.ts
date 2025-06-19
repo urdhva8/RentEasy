@@ -86,12 +86,18 @@ export const addChatMessage = (chatId: string, message: ChatMessage): ChatConver
   if (conversationIndex > -1) {
     const originalConversation = MOCK_CHAT_CONVERSATIONS[conversationIndex];
     
+    // Check if message already exists by ID
+    if (originalConversation.messages.some(m => m.id === message.id)) {
+      console.log("Message already exists, not adding:", message.id);
+      return originalConversation; // Return original if message already there
+    }
+    
     // Create new messages array and new conversation object
     const updatedMessages = [...originalConversation.messages, message];
     const updatedConversation: ChatConversation = {
       ...originalConversation,
       messages: updatedMessages,
-      lastMessage: message,
+      lastMessage: message, // Update last message
     };
     
     // Update the MOCK_CHAT_CONVERSATIONS array immutably for the specific item
@@ -100,10 +106,10 @@ export const addChatMessage = (chatId: string, message: ChatMessage): ChatConver
     );
 
     // Sort to bring the updated conversation to the top
-    const finalConversations = newConversations.sort((a, b) => {
-        if (a.id === updatedConversation.id) return -1; // updated one comes first
-        if (b.id === updatedConversation.id) return 1;  // updated one comes first
-        return (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0); // fallback sort
+     const finalConversations = newConversations.sort((a, b) => {
+        if (a.id === updatedConversation.id && b.id !== updatedConversation.id) return -1;
+        if (b.id === updatedConversation.id && a.id !== updatedConversation.id) return 1;
+        return (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0);
     });
     
     MOCK_CHAT_CONVERSATIONS.length = 0;
@@ -112,6 +118,7 @@ export const addChatMessage = (chatId: string, message: ChatMessage): ChatConver
     saveMockChatConversations();
     return updatedConversation; // Return the new object
   }
+  console.warn("Conversation not found for chatId:", chatId);
   return undefined;
 };
 
@@ -135,8 +142,8 @@ export const getOrCreateChatConversation = (propertyId: string, tenantId: string
             ownerId,
             ownerName,
             participants: [
-                { userId: ownerId, name: ownerName },
-                { userId: tenantId, name: tenantName },
+                { userId: ownerId, name: ownerName, profileImageUrl: MOCK_USERS.find(u=>u.id === ownerId)?.profileImageUrl },
+                { userId: tenantId, name: tenantName, profileImageUrl: MOCK_USERS.find(u=>u.id === tenantId)?.profileImageUrl },
             ],
             messages: [],
             // lastMessage will be updated when a message is added
