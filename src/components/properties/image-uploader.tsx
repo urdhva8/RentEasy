@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, ChangeEvent, DragEvent, useEffect } from "react";
+import React, { useState, ChangeEvent, DragEvent, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -24,16 +24,49 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Effect to initialize previews from initialImageUrls prop
+  // Effect to synchronize initialImageUrls prop with the 'isInitial' part of previewImages state
   useEffect(() => {
-    const initialPreviews: PreviewImage[] = initialImageUrls.map((url, index) => ({
-      id: `initial-${index}-${Date.now()}`,
-      url: url,
-      isInitial: true,
-    }));
-    setPreviewImages(initialPreviews);
-  }, [initialImageUrls]);
+    setPreviewImages(currentPreviewImages => {
+      // If initialImageUrls is empty and there are user-selected (non-initial) files in currentPreviewImages,
+      // then we don't change anything. This preserves the user's selection if the parent re-renders
+      // and passes a new empty array reference for initialImageUrls.
+      if (initialImageUrls.length === 0 && currentPreviewImages.some(p => !p.isInitial)) {
+        return currentPreviewImages; // No change needed
+      }
 
+      // Calculate new initial previews based on the prop
+      const newInitialPreviewsFromProp: PreviewImage[] = initialImageUrls.map((url, index) => ({
+        id: `initial-${index}-${url}`, // Use URL in ID for better stability
+        url: url,
+        isInitial: true,
+      }));
+
+      // Get existing user-added (non-initial) files from the current state
+      const currentUserAddedPreviews = currentPreviewImages.filter(p => !p.isInitial);
+      // Get existing initial previews from the current state
+      const currentInitialPreviewsInState = currentPreviewImages.filter(p => p.isInitial);
+
+      // Determine if the initial part of the state actually needs to be updated
+      let initialPartNeedsUpdate = newInitialPreviewsFromProp.length !== currentInitialPreviewsInState.length;
+      if (!initialPartNeedsUpdate && newInitialPreviewsFromProp.length > 0) {
+        // If lengths are the same and not zero, check if content is different
+        initialPartNeedsUpdate = newInitialPreviewsFromProp.some((newP, i) =>
+          newP.id !== currentInitialPreviewsInState[i]?.id || newP.url !== currentInitialPreviewsInState[i]?.url
+        );
+      } else if (!initialPartNeedsUpdate && newInitialPreviewsFromProp.length === 0 && currentInitialPreviewsInState.length > 0) {
+        // If new initial is empty, but old initial had items, it needs update (to empty initial)
+        initialPartNeedsUpdate = true;
+      }
+
+
+      if (initialPartNeedsUpdate) {
+        return [...newInitialPreviewsFromProp, ...currentUserAddedPreviews];
+      } else {
+        // If the initial part doesn't need an update, return the current state as is.
+        return currentPreviewImages; // No change needed
+      }
+    });
+  }, [initialImageUrls]); // This effect depends only on the initialImageUrls prop.
 
   // Effect to notify parent when the list of actual (non-initial) files changes
   useEffect(() => {
@@ -41,8 +74,6 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
       .filter(p => !p.isInitial && p.file)
       .map(p => p.file!);
     onImagesChange(newFiles);
-  // Adding onImagesChange to dependency array as it's an external function used in the effect.
-  // If it's not memoized in the parent, this effect might run more often, but it's correct practice.
   }, [previewImages, onImagesChange]);
 
 
@@ -55,17 +86,16 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
     }));
 
     setPreviewImages(prev => {
-      // Filter out any existing non-initial previews to avoid duplicates if user selects same file again
-      // and ensure initial previews are preserved unless explicitly removed.
       const existingInitialPreviews = prev.filter(p => p.isInitial);
-      const existingNewFilePreviews = prev.filter(p => !p.isInitial);
-      
-      // Filter out any files from newFilePreviews that might already be in existingNewFilePreviews (by name and size, for example)
-      // For simplicity here, we'll just append, but a more robust solution might check for duplicates.
+      // Filter out any existing non-initial previews that might be duplicates of new files.
+      // A more robust duplicate check might compare file name, size, and lastModified.
+      // For simplicity, we filter existing new files if a new file with the same name is added.
+      const existingNewFilePreviews = prev.filter(p => 
+        !p.isInitial && !newFilePreviews.some(nf => nf.file?.name === p.file?.name)
+      );
       const updatedPreviews = [...existingInitialPreviews, ...existingNewFilePreviews, ...newFilePreviews];
       return updatedPreviews;
     });
-    // The onImagesChange call is now handled by the useEffect hook that watches previewImages
   };
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -73,7 +103,6 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
     if (files) {
       processFiles(Array.from(files));
     }
-     // Reset file input to allow re-uploading the same file if needed
      if (event.target) {
         event.target.value = "";
     }
@@ -102,9 +131,7 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
     const removedItem = previewImages.find(p => p.id === idToRemove);
     
     setPreviewImages(prev => prev.filter(p => p.id !== idToRemove));
-    // The onImagesChange call is now handled by the useEffect hook
 
-    // Revoke blob URL if it was a newly added file that's now removed
     if (removedItem && !removedItem.isInitial && removedItem.url.startsWith('blob:')) {
       URL.revokeObjectURL(removedItem.url);
     }
@@ -144,9 +171,9 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
                 <Image
                   src={img.url}
                   alt={`Preview ${img.file?.name || 'initial image'}`}
-                  fill // Changed from layout="fill" objectFit="cover" to just fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // Example sizes, adjust as needed
-                  style={{ objectFit: "cover" }} // Replaces objectFit prop
+                  fill 
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
+                  style={{ objectFit: "cover" }} 
                   className="rounded-md"
                 />
                 <Button
