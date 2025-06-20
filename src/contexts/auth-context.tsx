@@ -40,14 +40,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (_event: AuthChangeEvent, session: Session | null) => {
         const supabaseUser = session?.user;
         if (supabaseUser) {
-          const { data: profile, error } = await supabase
+          const { data: profiles, error } = await supabase
             .from('users')
             .select('*')
-            .eq('id', supabaseUser.id)
-            .single();
+            .eq('id', supabaseUser.id);
 
           if (error) {
             console.error('Error fetching user profile:', error.message);
+            // Fallback to auth user data if profile fetch fails
             setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
@@ -56,7 +56,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 phoneNumber: supabaseUser.user_metadata?.phone_number || undefined,
                 profileImageUrl: supabaseUser.user_metadata?.profile_image_url || undefined,
             });
-          } else if (profile) {
+          } else if (profiles && profiles.length > 0) {
+            if (profiles.length > 1) {
+              console.warn(`Multiple profiles found for user ${supabaseUser.id}. Using the first one.`);
+            }
+            const profile = profiles[0];
             setUser({
               id: profile.id,
               name: profile.name || '',
@@ -66,12 +70,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               profileImageUrl: profile.profile_image_url || undefined,
             });
           } else {
-            console.warn(`Profile not found for user ${supabaseUser.id}. Setting user with basic auth info.`);
+            // Profile not found in public.users, but user is authenticated.
+            // This can happen if profile creation failed after signup.
+            // Create a basic user object from auth data.
+            console.warn(`Profile not found in public.users for authenticated user ${supabaseUser.id}. Using auth data as fallback.`);
             setUser({ 
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
                 name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'New User', 
-                role: (supabaseUser.user_metadata?.role as UserRole) || 'tenant',
+                role: (supabaseUser.user_metadata?.role as UserRole) || 'tenant', // Or a default role
                 profileImageUrl: supabaseUser.user_metadata?.profile_image_url || undefined,
                 phoneNumber: supabaseUser.user_metadata?.phone_number || undefined,
             });
@@ -126,7 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password: pass,
       options: {
-        data: {
+        data: { // This data is for user_metadata in auth.users, not directly for public.users
           name: name,
           role: role,
           phone_number: phoneNumber
@@ -142,17 +149,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (authData.user) {
       // User is created in auth, now create their profile in public.users
-      // Rely on the 'id' column in 'users' table to have DEFAULT auth.uid()
-      // And RLS policy WITH CHECK (auth.uid() = id)
       const { error: profileError } = await supabase
         .from('users')
         .insert({
-          // DO NOT provide 'id' here, let DB default handle it.
+          // id: authData.user.id, // Let DB default handle it IF RLS and default value are set for `id`
+          // OR explicitly set it if RLS check needs it:
+           id: authData.user.id,
           name,
-          email,
+          email, // Storing email here too for easier profile display
           role,
-          phone_number: phoneNumber || null, // Ensure null if empty or undefined
-          profile_image_url: null, // Explicitly set if not provided initially
+          phone_number: phoneNumber || null,
+          profile_image_url: null,
+          // created_at and updated_at will be set by DB defaults if configured
         });
 
       if (profileError) {
@@ -169,6 +177,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
           setPostAuthCaption("Finding a home made easy");
       }
+      // setLoading(false) will be handled by onAuthStateChange
       return true;
     }
     setLoading(false); 
@@ -182,7 +191,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Supabase logout error:", error.message);
     }
     setPostAuthCaption(null); 
+    setUser(null); // Explicitly set user to null on logout
     router.push("/login");
+    // setLoading will be handled by onAuthStateChange eventually
   };
 
   const updateProfileImage = async (imageUrl: string): Promise<boolean> => {
@@ -194,7 +205,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .update({ profile_image_url: imageUrl, updated_at: new Date().toISOString() })
       .eq('id', user.id)
       .select('profile_image_url') 
-      .single();
+      .single(); // .single() is okay here if we are sure an update implies the row exists.
 
     if (error) {
       console.error("Error updating profile image URL in Supabase:", error.message);
@@ -234,3 +245,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
