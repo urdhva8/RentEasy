@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
   title: "RentEasy",
   description: "Find your next rental easily with RentEasy",
-  icons: null, // Explicitly disable default icons
+  icons: null, // Explicitly try to disable default icons via metadata
 };
 
 export default function RootLayout({
@@ -18,6 +18,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Attempt to force a blank favicon */}
+        <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
