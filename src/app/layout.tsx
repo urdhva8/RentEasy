@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/auth-context";
@@ -6,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
   title: "RentEasy",
   description: "Find your next rental easily with RentEasy",
+  icons: null, // Explicitly disable default icons
 };
 
 export default function RootLayout({
