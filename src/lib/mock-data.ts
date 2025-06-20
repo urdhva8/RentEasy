@@ -18,7 +18,7 @@ function loadFromLocalStorage<T>(key: string, defaultValue: T[]): T[] {
       }
     }
   }
-  return [...defaultValue]; // Return a copy of the default to prevent mutation of const
+  return [...defaultValue]; 
 }
 
 function saveToLocalStorage<T>(key: string, value: T[]): void {
@@ -27,7 +27,7 @@ function saveToLocalStorage<T>(key: string, value: T[]): void {
   }
 }
 
-// --- Users ---
+
 const DEFAULT_MOCK_USERS: User[] = [
   { id: "owner1", name: "Urdhva Sugganaboyina", email: "urdhva.suggana@gmail.com", role: "owner", phoneNumber: "7675801718", profileImageUrl: undefined },
   { id: "tenant1", name: "Rohan Verma", email: "rohan.tenant@example.com", role: "tenant", profileImageUrl: undefined },
@@ -43,7 +43,7 @@ export function saveMockUsers() {
 export function updateUserProfileImage(userId: string, imageUrl: string): User | null {
   const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
   if (userIndex > -1) {
-    // Create a new user object for the update to ensure React detects changes
+    
     const updatedUser = { ...MOCK_USERS[userIndex], profileImageUrl: imageUrl };
     MOCK_USERS[userIndex] = updatedUser;
     saveMockUsers();
@@ -52,23 +52,23 @@ export function updateUserProfileImage(userId: string, imageUrl: string): User |
   return null;
 }
 
-// --- Properties ---
-const DEFAULT_MOCK_PROPERTIES: Property[] = []; // Ensures no default properties are loaded on a fresh start
+
+const DEFAULT_MOCK_PROPERTIES: Property[] = []; 
 const MOCK_PROPERTIES_STORAGE_KEY = 'renteasy_mock_properties_list';
 export let MOCK_PROPERTIES: Property[] = loadFromLocalStorage<Property>(MOCK_PROPERTIES_STORAGE_KEY, DEFAULT_MOCK_PROPERTIES);
 export function saveMockProperties() {
   saveToLocalStorage<Property>(MOCK_PROPERTIES_STORAGE_KEY, MOCK_PROPERTIES);
 }
 
-// --- Chat Conversations ---
-const DEFAULT_MOCK_CHAT_CONVERSATIONS: ChatConversation[] = []; // No default conversations
+
+const DEFAULT_MOCK_CHAT_CONVERSATIONS: ChatConversation[] = []; 
 const MOCK_CHAT_CONVERSATIONS_STORAGE_KEY = 'renteasy_mock_chat_conversations_list';
 export let MOCK_CHAT_CONVERSATIONS: ChatConversation[] = loadFromLocalStorage<ChatConversation>(MOCK_CHAT_CONVERSATIONS_STORAGE_KEY, DEFAULT_MOCK_CHAT_CONVERSATIONS);
 export function saveMockChatConversations() {
   saveToLocalStorage<ChatConversation>(MOCK_CHAT_CONVERSATIONS_STORAGE_KEY, MOCK_CHAT_CONVERSATIONS);
 }
 
-// --- Interests ---
+
 const DEFAULT_MOCK_INTERESTS: Interest[] = []; // No default interests
 const MOCK_INTERESTS_STORAGE_KEY = 'renteasy_mock_interests_list';
 export let MOCK_INTERESTS: Interest[] = loadFromLocalStorage<Interest>(MOCK_INTERESTS_STORAGE_KEY, DEFAULT_MOCK_INTERESTS);
