@@ -64,27 +64,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUser({
               id: profile.id,
               name: profile.name || '',
-              email: profile.email || supabaseUser.email || '', 
+              email: profile.email || supabaseUser.email || '',
               role: profile.role as UserRole,
               phoneNumber: profile.phone_number || undefined,
               profileImageUrl: profile.profile_image_url || undefined,
             });
           } else {
-            // Profile not found in public.users, but user is authenticated.
-            // This can happen if profile creation failed after signup.
-            // Create a basic user object from auth data.
             console.warn(`Profile not found in public.users for authenticated user ${supabaseUser.id}. Using auth data as fallback.`);
-            setUser({ 
+            setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
-                name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'New User', 
-                role: (supabaseUser.user_metadata?.role as UserRole) || 'tenant', // Or a default role
+                name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'New User',
+                role: (supabaseUser.user_metadata?.role as UserRole) || 'tenant',
                 profileImageUrl: supabaseUser.user_metadata?.profile_image_url || undefined,
                 phoneNumber: supabaseUser.user_metadata?.phone_number || undefined,
             });
           }
         } else {
-          setUser(null); 
+          setUser(null);
         }
         setLoading(false);
       }
@@ -100,7 +97,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const timer = setTimeout(() => {
         setPostAuthCaption(null);
         router.push("/dashboard");
-      }, 2000); 
+      }, 2000);
       return () => clearTimeout(timer);
     }
     else if (!loading && !postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
@@ -120,10 +117,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (data.user) {
-      setPostAuthCaption("Finding a home made easy"); 
+      setPostAuthCaption("Finding a home made easy");
+      // setLoading(false) will be handled by onAuthStateChange
       return true;
     }
-    setLoading(false);
+    setLoading(false); // Should not happen if data.user is null and no error
     return false;
   };
 
@@ -133,7 +131,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password: pass,
       options: {
-        data: { // This data is for user_metadata in auth.users, not directly for public.users
+        data: {
           name: name,
           role: role,
           phone_number: phoneNumber
@@ -148,30 +146,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (authData.user) {
-      // User is created in auth, now create their profile in public.users
       const { error: profileError } = await supabase
         .from('users')
         .insert({
           // id: authData.user.id, // Let DB default handle it IF RLS and default value are set for `id`
-          // OR explicitly set it if RLS check needs it:
-           id: authData.user.id,
+          //Explicitly providing id from authData.user.id
+          id: authData.user.id,
           name,
-          email, // Storing email here too for easier profile display
+          email,
           role,
           phone_number: phoneNumber || null,
           profile_image_url: null,
-          // created_at and updated_at will be set by DB defaults if configured
         });
 
       if (profileError) {
         console.error("Error creating user profile in Supabase:", profileError.message);
-        // User is created in auth, but profile creation failed.
-        // setLoading(false) will be handled by onAuthStateChange eventually, 
-        // but for immediate feedback or retry, consider setting it here too.
-        setLoading(false); 
-        return false; 
+        setLoading(false);
+        return false;
       }
-      
+
       if (role === 'owner') {
           setPostAuthCaption("Renting a home made easy");
       } else {
@@ -180,20 +173,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // setLoading(false) will be handled by onAuthStateChange
       return true;
     }
-    setLoading(false); 
+    setLoading(false);
     return false;
   };
 
   const logout = async () => {
-    setLoading(true);
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Supabase logout error:", error.message);
+    setLoading(true); // Indicate start of logout process
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Supabase logout error:", error.message);
+        // Even if there's an error, we should proceed to clear client state
+      }
+    } catch (e) {
+      // Catch any unexpected errors during sign out
+      console.error("Exception during Supabase signout:", e);
+    } finally {
+      // These actions should happen regardless of signout success/failure
+      // to ensure client state is reset and user is redirected.
+      setUser(null);
+      setPostAuthCaption(null);
+      router.push("/login");
+      setLoading(false); // Update loading state after client-side operations are done
     }
-    setPostAuthCaption(null); 
-    setUser(null); // Explicitly set user to null on logout
-    router.push("/login");
-    // setLoading will be handled by onAuthStateChange eventually
   };
 
   const updateProfileImage = async (imageUrl: string): Promise<boolean> => {
@@ -204,8 +206,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .from('users')
       .update({ profile_image_url: imageUrl, updated_at: new Date().toISOString() })
       .eq('id', user.id)
-      .select('profile_image_url') 
-      .single(); // .single() is okay here if we are sure an update implies the row exists.
+      .select('profile_image_url')
+      .single();
 
     if (error) {
       console.error("Error updating profile image URL in Supabase:", error.message);
@@ -230,7 +232,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   if (loading && !user && !pathname.startsWith('/login') && !pathname.startsWith('/register')) {
      return <LoadingScreen />;
   }
-  
+
   return (
     <AuthContext.Provider value={{ user, login, register, logout, updateProfileImage, loading, isOwner, isTenant }}>
       {children}
@@ -245,4 +247,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
