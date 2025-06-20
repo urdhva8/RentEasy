@@ -5,10 +5,11 @@ import { useAuth } from "@/contexts/auth-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { UserCircle2, UploadCloud } from "lucide-react";
+import { UserCircle2, UploadCloud, Edit } from "lucide-react"; // Added Edit icon
 import React, { useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Input } from "@/components/ui/input"; // Import Input for file upload
+import { Input } from "@/components/ui/input"; 
+import Link from "next/link"; // Added Link
 
 export default function ProfilePage() {
   const { user, updateProfileImage } = useAuth();
@@ -70,7 +71,6 @@ export default function ProfilePage() {
       };
       reader.readAsDataURL(file);
     }
-     // Reset file input to allow re-uploading the same file if needed
     if (event.target) {
         event.target.value = "";
     }
@@ -116,8 +116,11 @@ export default function ProfilePage() {
               <p className="font-body text-lg">{user.phoneNumber}</p>
             </div>
           )}
-          <Button className="w-full mt-6 btn-gradient-primary" disabled>
-            Edit Profile (Coming Soon)
+          <Button asChild className="w-full mt-6 btn-gradient-primary">
+            <Link href="/profile/edit">
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Profile
+            </Link>
           </Button> 
         </CardContent>
       </Card>

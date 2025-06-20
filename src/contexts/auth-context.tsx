@@ -14,6 +14,7 @@ interface AuthContextType {
   register: (name: string, email: string, role: UserRole, pass: string, phoneNumber?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateProfileImage: (imageUrl: string) => Promise<boolean>;
+  updateUserProfileData: (updatedData: { name?: string; phoneNumber?: string }) => Promise<boolean>; // New function
   loading: boolean;
   isOwner: boolean;
   isTenant: boolean;
@@ -70,7 +71,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               profileImageUrl: profile.profile_image_url || undefined,
             });
           } else {
-            // Profile not found in public.users, fallback to auth data
             console.warn(`Profile not found in public.users for authenticated user ${supabaseUser.id}. Using auth data as fallback.`);
             setUser({
                 id: supabaseUser.id,
@@ -134,7 +134,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (data.user) {
       setPostAuthCaption("Logging in...");
-      // User state will be set by onAuthStateChange
       return true;
     }
     setLoading(false);
@@ -162,42 +161,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (authData.user) {
-      // The user is created in auth.users. Now create their profile in public.users.
-      // The `id` column in `public.users` should have `DEFAULT auth.uid()`.
-      // The RLS policy for INSERT on `public.users` should be `WITH CHECK (auth.uid() = id)`.
       const { error: profileError } = await supabase
         .from('users')
         .insert({
-          // DO NOT explicitly set the `id` here; rely on the database default `auth.uid()`.
+          // id is NOT explicitly set here, relying on db default auth.uid()
           name,
           email,
           role,
           phone_number: phoneNumber || null,
           profile_image_url: null,
-          // `created_at` and `updated_at` should also have database defaults.
         });
 
       if (profileError) {
         console.error("Error creating user profile in Supabase:", profileError.message);
-        // User is created in auth, but profile creation failed.
-        // setLoading(false) will be handled by onAuthStateChange eventually, 
-        // but for immediate feedback or retry, consider setting it here too.
-        // For now, onAuthStateChange will still pick up the auth user.
-        // Potentially, this could leave the user in a state where they are authenticated
-        // but don't have a profile in public.users, which can cause issues later.
-        setPostAuthCaption("Registration successful, profile data pending..."); // Indicate some issue
-        // It might be better to return false or throw an error to signify incomplete registration.
-        // However, for now, let's allow onAuthStateChange to proceed.
-        return false; // Indicating profile creation failed.
+        setPostAuthCaption("Registration successful, profile data pending..."); 
+        return false; 
       }
       
-      // Profile creation successful
       if (role === 'owner') {
           setPostAuthCaption("Turn your property into profit — the easy way.");
       } else {
           setPostAuthCaption("Your perfect rental, just a click away");
       }
-      // User state will be set by onAuthStateChange
       return true;
     }
     setLoading(false);
@@ -229,27 +214,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .from('users')
       .update({ profile_image_url: imageUrl, updated_at: new Date().toISOString() })
       .eq('id', user.id)
-      .select('profile_image_url'); // Select the column to confirm update
+      .select('profile_image_url'); 
 
+    setLoading(false);
     if (error) {
       console.error("Error updating profile image URL in Supabase:", error.message);
-      setLoading(false);
+      return false;
+    }
+    
+    if (updatedData && updatedData.length > 0) {
+      setUser(prevUser => prevUser ? ({ ...prevUser, profileImageUrl: updatedData[0].profile_image_url || undefined }) : null);
+      return true;
+    } else {
+      console.warn(`Profile image update: No user profile found in 'public.users' for id: ${user.id}. Image URL not updated in DB.`);
+      return false; 
+    }
+  };
+
+  const updateUserProfileData = async (updatedData: { name?: string; phoneNumber?: string }): Promise<boolean> => {
+    if (!user) return false;
+    setLoading(true);
+
+    const dataToUpdate: { name?: string; phone_number?: string; updated_at: string } = {
+        updated_at: new Date().toISOString(),
+    };
+    if (updatedData.name !== undefined) dataToUpdate.name = updatedData.name;
+    if (updatedData.phoneNumber !== undefined) dataToUpdate.phone_number = updatedData.phoneNumber;
+
+
+    const { data: resultData, error } = await supabase
+      .from('users')
+      .update(dataToUpdate)
+      .eq('id', user.id)
+      .select('name, phone_number');
+    
+    setLoading(false);
+    if (error) {
+      console.error("Error updating user profile data in Supabase:", error.message);
       return false;
     }
 
-    // Check if the update actually returned data (i.e., if a row was found and updated)
-    if (updatedData && updatedData.length > 0) {
-      setUser(prevUser => prevUser ? ({ ...prevUser, profileImageUrl: updatedData[0].profile_image_url || undefined }) : null);
-      setLoading(false);
+    if (resultData && resultData.length > 0) {
+      setUser(prevUser => {
+        if (!prevUser) return null;
+        return {
+          ...prevUser,
+          name: resultData[0].name || prevUser.name,
+          phoneNumber: resultData[0].phone_number || prevUser.phoneNumber,
+        };
+      });
       return true;
     } else {
-      // This case means no row matched user.id, so nothing was updated.
-      // This is a strong indication that the user's profile row is missing in `public.users`.
-      console.warn(`Profile image update: No user profile found in 'public.users' for id: ${user.id}. Image URL not updated in DB.`);
-      setLoading(false);
-      return false; // Indicate failure as the DB was not updated.
+       console.warn(`User profile data update: No user profile found in 'public.users' for id: ${user.id} or no changes made.`);
+       // It could also mean the data provided was the same as existing, so Supabase might not return data.
+       // For simplicity, we'll treat it as potentially no row found if no data is returned.
+       return false;
     }
   };
+
 
   const isOwner = user?.role === 'owner';
   const isTenant = user?.role === 'tenant';
@@ -263,7 +285,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateProfileImage, loading, isOwner, isTenant }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateProfileImage, updateUserProfileData, loading, isOwner, isTenant }}>
       {children}
     </AuthContext.Provider>
   );
@@ -276,3 +298,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
