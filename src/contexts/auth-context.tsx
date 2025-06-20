@@ -4,14 +4,15 @@
 import type { User, UserRole } from "@/types";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { MOCK_USERS, saveMockUsers, updateUserProfileImage as apiUpdateUserProfileImage } from "@/lib/mock-data";
 import { FullScreenCaption } from "@/components/layout/full-screen-caption";
+import { supabase } from "@/lib/supabaseClient";
+import type { AuthChangeEvent, Session, User as SupabaseAuthUser } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, pass: string) => Promise<boolean>;
   register: (name: string, email: string, role: UserRole, pass: string, phoneNumber?: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>; // Changed to Promise<void>
   updateProfileImage: (imageUrl: string) => Promise<boolean>;
   loading: boolean;
   isOwner: boolean;
@@ -19,8 +20,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const AUTH_USER_KEY = "renteasy_user";
 
 const LoadingScreen = () => (
     <div className="flex items-center justify-center min-h-screen bg-background dark">
@@ -30,130 +29,201 @@ const LoadingScreen = () => (
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // True until initial user check from localStorage is done
+  const [loading, setLoading] = useState(true);
   const [postAuthCaption, setPostAuthCaption] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem(AUTH_USER_KEY);
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error("Failed to parse stored user", e);
-        localStorage.removeItem(AUTH_USER_KEY);
+    setLoading(true);
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (_event: AuthChangeEvent, session: Session | null) => {
+        const supabaseUser = session?.user;
+        if (supabaseUser) {
+          const { data: profile, error } = await supabase
+            .from('users') // Assumes a 'users' table in your Supabase public schema
+            .select('*')
+            .eq('id', supabaseUser.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching user profile:', error.message);
+            setUser(null);
+          } else if (profile) {
+            setUser({
+              id: profile.id,
+              name: profile.name || '',
+              email: supabaseUser.email || '', // Use email from auth.user for consistency
+              role: profile.role as UserRole, // Make sure 'role' column exists and stores valid UserRole
+              phoneNumber: profile.phone_number || undefined,
+              profileImageUrl: profile.profile_image_url || undefined,
+            });
+          } else {
+            // User exists in auth.users but not in public.users table.
+            // This might happen if profile creation failed after signup or for new social logins.
+            // A robust app would handle profile creation here or guide the user.
+            console.warn(`Profile not found for user ${supabaseUser.id}. Setting user with basic auth info.`);
+            setUser({ // Fallback user object
+                id: supabaseUser.id,
+                email: supabaseUser.email || '',
+                name: supabaseUser.email?.split('@')[0] || 'New User', // Placeholder name
+                role: 'tenant', // Default role, or consider a profile setup step
+                profileImageUrl: undefined,
+                phoneNumber: undefined,
+            });
+          }
+        } else {
+          setUser(null); // No active session
+        }
+        setLoading(false);
       }
-    }
-    setLoading(false); // Initial user check complete
+    );
+
+    return () => {
+      authListener?.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    // Handle showing caption and then redirecting
+    // Handle showing caption and then redirecting after login/registration
     if (postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
       const timer = setTimeout(() => {
         setPostAuthCaption(null);
         router.push("/dashboard");
-      }, 3000);
+      }, 2000); // Show caption for 2 seconds
       return () => clearTimeout(timer);
     }
-    // Handle general redirection logic when not showing a caption and initial load is done
-    else if (!loading && !postAuthCaption) {
-      if (user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
-        router.push("/dashboard");
-      } else if (!user && !pathname.startsWith('/login') && !pathname.startsWith('/register') && pathname !== '/help') {
-        // router.push("/login"); // Kept commented as per previous interaction
-      }
+    // Handle general redirection for authenticated users away from auth pages
+    else if (!loading && !postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
+      router.push("/dashboard");
     }
+    // AppLayout will handle redirecting unauthenticated users from protected pages
   }, [user, loading, pathname, router, postAuthCaption]);
 
 
   const login = async (email: string, pass: string): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-    const foundUser = MOCK_USERS.find(u => u.email === email);
-    if (foundUser) {
-      const userToStore: User = {
-        id: foundUser.id,
-        email: foundUser.email,
-        name: foundUser.name,
-        role: foundUser.role,
-        phoneNumber: foundUser.phoneNumber,
-        profileImageUrl: foundUser.profileImageUrl,
-      };
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userToStore));
-      setUser(userToStore);
-      if (userToStore.role === 'owner') {
-        setPostAuthCaption("Renting a home made easy");
-      } else {
-        setPostAuthCaption("Finding a home made easy");
-      }
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+
+    if (error) {
+      console.error("Supabase login error:", error.message);
+      // setLoading(false) will be handled by onAuthStateChange
+      return false;
+    }
+
+    if (data.user) {
+      // onAuthStateChange will fetch profile and set user.
+      // Set caption based on a temporary assumption or a quick profile peek if critical.
+      // For simplicity, let's set a generic caption; onAuthStateChange will establish the user's role.
+      setPostAuthCaption("Finding a home made easy"); // Or fetch role for specific caption
       return true;
     }
+    // setLoading(false); // onAuthStateChange will handle this
     return false;
   };
 
   const register = async (name: string, email: string, role: UserRole, pass: string, phoneNumber?: string): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-    if (MOCK_USERS.find(u => u.email === email)) {
+    setLoading(true);
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password: pass,
+      // Supabase user_metadata for new users can be set here if needed,
+      // but creating a separate profile in 'users' table is more common for public data.
+    });
+
+    if (authError) {
+      console.error("Supabase registration error:", authError.message);
+      // setLoading(false);
       return false;
     }
-    const newUser: User = { id: String(Date.now()), name, email, role, phoneNumber, profileImageUrl: undefined };
-    MOCK_USERS.push(newUser);
-    saveMockUsers();
 
-    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(newUser));
-    setUser(newUser);
-    if (newUser.role === 'owner') {
-        setPostAuthCaption("Renting a home made easy");
-      } else {
-        setPostAuthCaption("Finding a home made easy");
+    if (authData.user) {
+      // Insert user details into your public 'users' table
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id, // Link to the auth.users table
+          name,
+          email, // Storing email in profile table can be convenient
+          role,
+          phone_number: phoneNumber,
+          // profile_image_url will be null initially
+        });
+
+      if (profileError) {
+        console.error("Error creating user profile in Supabase:", profileError.message);
+        // User is created in auth, but profile creation failed.
+        // Consider cleanup or retry logic for a production app.
+        // For now, onAuthStateChange will still pick up the auth user.
       }
-    return true;
+      
+      if (role === 'owner') {
+          setPostAuthCaption("Renting a home made easy");
+      } else {
+          setPostAuthCaption("Finding a home made easy");
+      }
+      // onAuthStateChange will set the user state.
+      return true;
+    }
+    // setLoading(false);
+    return false;
   };
 
-  const logout = () => {
-    localStorage.removeItem(AUTH_USER_KEY);
-    setUser(null);
-    setPostAuthCaption(null);
+  const logout = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Supabase logout error:", error.message);
+    }
+    // setUser(null) and setLoading(false) will be handled by onAuthStateChange
+    setPostAuthCaption(null); // Clear any active caption
     router.push("/login");
   };
 
   const updateProfileImage = async (imageUrl: string): Promise<boolean> => {
     if (!user) return false;
-    const rawUpdatedUser = apiUpdateUserProfileImage(user.id, imageUrl);
-    if (rawUpdatedUser) {
-      // Create a new object reference to ensure React detects the change
-      const newClonedUser = { ...rawUpdatedUser };
-      setUser(newClonedUser);
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(newClonedUser));
-      return true;
+    setLoading(true);
+
+    // Note: For production, `imageUrl` (if a data URI) should be uploaded to Supabase Storage,
+    // and the public URL from storage saved here. This example directly saves the provided URL/data URI.
+    const { data: updatedProfile, error } = await supabase
+      .from('users')
+      .update({ profile_image_url: imageUrl })
+      .eq('id', user.id)
+      .select('profile_image_url') // Only select the field we care about
+      .single();
+
+    if (error) {
+      console.error("Error updating profile image URL in Supabase:", error.message);
+      setLoading(false);
+      return false;
     }
-    return false;
+
+    if (updatedProfile) {
+      // Update local user state optimistically or based on returned data
+      setUser(prevUser => prevUser ? ({ ...prevUser, profileImageUrl: updatedProfile.profile_image_url || undefined }) : null);
+    }
+    setLoading(false);
+    return true;
   };
 
   const isOwner = user?.role === 'owner';
   const isTenant = user?.role === 'tenant';
 
-  // --- Render Logic ---
-
-  // 1. If post-authentication caption should be shown
   if (postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
     return <FullScreenCaption text={postAuthCaption} />;
   }
 
-  // 2. If initial loading from localStorage is still in progress
-  if (loading) {
+  if (loading && !user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
+    // Show loading screen on auth pages if genuinely loading initial state
     return <LoadingScreen />;
   }
+  
+  // AppLayout also has a loading screen, this one is specific to AuthContext's initial load
+  // or transitions managed by AuthContext. Avoid double loading screens if possible.
+  // The primary loading screen for page protection is in AppLayout.
+  // This loading state is more for transitions within AuthContext itself.
 
-  // 3. If user is authenticated, on an auth page, and caption is done (i.e., redirecting to dashboard)
-  // This prevents the auth page from flashing after the caption.
-  if (user && (pathname.startsWith('/login') || pathname.startsWith('/register')) && !postAuthCaption) {
-    return <LoadingScreen />;
-  }
-
-  // 4. Otherwise, provide the context and render children
-  // AppLayout will handle its own loading/redirect logic if user is null on a protected route.
   return (
     <AuthContext.Provider value={{ user, login, register, logout, updateProfileImage, loading, isOwner, isTenant }}>
       {children}
