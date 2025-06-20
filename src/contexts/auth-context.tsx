@@ -42,11 +42,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (supabaseUser) {
           const { data: profiles, error } = await supabase
             .from('users')
-            .select('*')
+            .select('id, name, email, role, phone_number, profile_image_url') // Select specific columns
             .eq('id', supabaseUser.id);
 
           if (error) {
             console.error('Error fetching user profile:', error.message);
+            // Fallback to auth data if profile fetch fails
             setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
@@ -69,12 +70,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               profileImageUrl: profile.profile_image_url || undefined,
             });
           } else {
+            // Profile not found in public.users, fallback to auth data
             console.warn(`Profile not found in public.users for authenticated user ${supabaseUser.id}. Using auth data as fallback.`);
             setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
                 name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'New User',
-                role: (supabaseUser.user_metadata?.role as UserRole) || 'tenant', // Default to tenant if no profile role
+                role: (supabaseUser.user_metadata?.role as UserRole) || 'tenant',
                 profileImageUrl: supabaseUser.user_metadata?.profile_image_url || undefined,
                 phoneNumber: supabaseUser.user_metadata?.phone_number || undefined,
             });
@@ -91,26 +93,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Effect to set role-specific caption AFTER user object is confirmed (primarily for login)
   useEffect(() => {
     if (user && !loading && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
-      // This effect is primarily for login. Register sets its own caption.
-      // If postAuthCaption is "Logging in..." (set by the login function), update it based on user.role.
       if (postAuthCaption === "Logging in...") {
         if (user.role === 'owner') {
           setPostAuthCaption("Turn your property into profit — the easy way.");
         } else if (user.role === 'tenant') {
           setPostAuthCaption("Your perfect rental, just a click away");
         } else {
-          setPostAuthCaption("Welcome to RentEasy!"); // Fallback if role is unknown
+          setPostAuthCaption("Welcome to RentEasy!");
         }
       }
-      // If register has already set a specific caption, this effect won't (and shouldn't) change it.
     }
   }, [user, loading, pathname, postAuthCaption]);
 
 
-  // Effect to display caption and redirect or just redirect
   useEffect(() => {
     if (postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
       const timer = setTimeout(() => {
@@ -136,12 +133,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (data.user) {
-      // Set a generic caption. The new useEffect will set the role-specific one.
       setPostAuthCaption("Logging in...");
-      // setLoading(false) will be handled by onAuthStateChange
       return true;
     }
-    setLoading(false); // Should not happen if data.user is null and no error
+    setLoading(false);
     return false;
   };
 
@@ -151,7 +146,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password: pass,
       options: {
-        data: { // This data is for supabase.auth.users user_metadata
+        data: { 
           name: name,
           role: role,
           phone_number: phoneNumber
@@ -166,12 +161,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (authData.user) {
-      // Now insert into public.users table
       const { error: profileError } = await supabase
         .from('users')
         .insert({
-          // id column in 'users' table has DEFAULT auth.uid()
-          // We let the DB handle setting the ID via default.
+          // id is set by DB default auth.uid()
           name,
           email,
           role,
@@ -181,14 +174,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (profileError) {
         console.error("Error creating user profile in Supabase:", profileError.message);
-        // User is created in auth, but profile creation failed.
-        // setLoading(false) will be handled by onAuthStateChange eventually,
-        // but for immediate feedback or retry, consider setting it here too.
-        // For now, onAuthStateChange will still pick up the auth user.
-        // If profile creation failed, the role specific caption might be an issue.
-        // Let's set a generic caption and rely on onAuthStateChange to populate user for the other useEffect.
-        setPostAuthCaption("Registration successful, setting up profile...");
-        return false; // Indicate profile creation failure
+        setPostAuthCaption("Registration successful, profile setup pending...");
+        return false; 
       }
 
       if (role === 'owner') {
@@ -196,7 +183,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } else {
           setPostAuthCaption("Your perfect rental, just a click away");
       }
-      // setLoading(false) will be handled by onAuthStateChange
       return true;
     }
     setLoading(false);
@@ -204,7 +190,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    setLoading(true); // Indicate loading starts
+    setLoading(true); 
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -214,9 +200,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Exception during Supabase signout:", e);
     } finally {
       setUser(null);
-      setPostAuthCaption(null); // Clear any lingering captions
+      setPostAuthCaption(null); 
       router.push("/login");
-      setLoading(false); // Indicate loading ends after client-side changes
+      setLoading(false); 
     }
   };
 
@@ -228,8 +214,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .from('users')
       .update({ profile_image_url: imageUrl, updated_at: new Date().toISOString() })
       .eq('id', user.id)
-      .select('profile_image_url') // Select only what's needed
-      .single(); // Expect one row
+      .select('profile_image_url') 
+      .single(); 
 
 
     if (error) {
