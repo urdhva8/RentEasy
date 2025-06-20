@@ -39,6 +39,12 @@ export interface Interest {
   message?: string;
 }
 
+export interface ChatConversationParticipant {
+  userId: string;
+  name: string;
+  profileImageUrl?: string; // Added for participant's profile image
+}
+
 export interface ChatConversation {
   id: string; // propertyId-tenantId
   propertyId: string;
@@ -47,7 +53,7 @@ export interface ChatConversation {
   tenantName: string;
   ownerId: string;
   ownerName: string;
-  participants: { userId: string, name: string }[];
+  participants: ChatConversationParticipant[]; // Updated to use the new type
   lastMessage?: ChatMessage;
   messages: ChatMessage[];
 }
