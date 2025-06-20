@@ -98,9 +98,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // If postAuthCaption is "Logging in..." (set by the login function), update it based on user.role.
       if (postAuthCaption === "Logging in...") {
         if (user.role === 'owner') {
-          setPostAuthCaption("Renting a home made easy");
+          setPostAuthCaption("Turn your property into profit — the easy way.");
         } else if (user.role === 'tenant') {
-          setPostAuthCaption("Finding a home made easy");
+          setPostAuthCaption("Your perfect rental, just a click away");
         } else {
           setPostAuthCaption("Welcome to RentEasy!"); // Fallback if role is unknown
         }
@@ -171,13 +171,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('users')
         .insert({
           // id column in 'users' table has DEFAULT auth.uid()
+          // We let the DB handle setting the ID via default.
           name,
           email,
           role,
           phone_number: phoneNumber || null,
           profile_image_url: null,
-          // Explicitly pass id from authData.user.id for RLS check if default is not working as expected
-          id: authData.user.id,
         });
 
       if (profileError) {
@@ -193,9 +192,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (role === 'owner') {
-          setPostAuthCaption("Renting a home made easy");
+          setPostAuthCaption("Turn your property into profit — the easy way.");
       } else {
-          setPostAuthCaption("Finding a home made easy");
+          setPostAuthCaption("Your perfect rental, just a click away");
       }
       // setLoading(false) will be handled by onAuthStateChange
       return true;
@@ -205,7 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    setLoading(true);
+    setLoading(true); // Indicate loading starts
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -215,9 +214,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Exception during Supabase signout:", e);
     } finally {
       setUser(null);
-      setPostAuthCaption(null);
+      setPostAuthCaption(null); // Clear any lingering captions
       router.push("/login");
-      setLoading(false); 
+      setLoading(false); // Indicate loading ends after client-side changes
     }
   };
 
@@ -229,8 +228,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .from('users')
       .update({ profile_image_url: imageUrl, updated_at: new Date().toISOString() })
       .eq('id', user.id)
-      .select('profile_image_url')
-      .single();
+      .select('profile_image_url') // Select only what's needed
+      .single(); // Expect one row
+
 
     if (error) {
       console.error("Error updating profile image URL in Supabase:", error.message);
