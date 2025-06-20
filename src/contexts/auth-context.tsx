@@ -47,7 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (error) {
             console.error('Error fetching user profile:', error.message);
-            // Fallback to auth user data if profile fetch fails
             setUser({
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
@@ -75,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 id: supabaseUser.id,
                 email: supabaseUser.email || '',
                 name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'New User',
-                role: (supabaseUser.user_metadata?.role as UserRole) || 'tenant',
+                role: (supabaseUser.user_metadata?.role as UserRole) || 'tenant', // Default to tenant if no profile role
                 profileImageUrl: supabaseUser.user_metadata?.profile_image_url || undefined,
                 phoneNumber: supabaseUser.user_metadata?.phone_number || undefined,
             });
@@ -92,6 +91,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
+  // Effect to set role-specific caption AFTER user object is confirmed (primarily for login)
+  useEffect(() => {
+    if (user && !loading && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
+      // This effect is primarily for login. Register sets its own caption.
+      // If postAuthCaption is "Logging in..." (set by the login function), update it based on user.role.
+      if (postAuthCaption === "Logging in...") {
+        if (user.role === 'owner') {
+          setPostAuthCaption("Renting a home made easy");
+        } else if (user.role === 'tenant') {
+          setPostAuthCaption("Finding a home made easy");
+        } else {
+          setPostAuthCaption("Welcome to RentEasy!"); // Fallback if role is unknown
+        }
+      }
+      // If register has already set a specific caption, this effect won't (and shouldn't) change it.
+    }
+  }, [user, loading, pathname, postAuthCaption]);
+
+
+  // Effect to display caption and redirect or just redirect
   useEffect(() => {
     if (postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
       const timer = setTimeout(() => {
@@ -117,7 +136,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (data.user) {
-      setPostAuthCaption("Finding a home made easy");
+      // Set a generic caption. The new useEffect will set the role-specific one.
+      setPostAuthCaption("Logging in...");
       // setLoading(false) will be handled by onAuthStateChange
       return true;
     }
@@ -131,7 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password: pass,
       options: {
-        data: {
+        data: { // This data is for supabase.auth.users user_metadata
           name: name,
           role: role,
           phone_number: phoneNumber
@@ -146,23 +166,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (authData.user) {
+      // Now insert into public.users table
       const { error: profileError } = await supabase
         .from('users')
         .insert({
-          // id: authData.user.id, // Let DB default handle it IF RLS and default value are set for `id`
-          //Explicitly providing id from authData.user.id
-          id: authData.user.id,
+          // id column in 'users' table has DEFAULT auth.uid()
           name,
           email,
           role,
           phone_number: phoneNumber || null,
           profile_image_url: null,
+          // Explicitly pass id from authData.user.id for RLS check if default is not working as expected
+          id: authData.user.id,
         });
 
       if (profileError) {
         console.error("Error creating user profile in Supabase:", profileError.message);
-        setLoading(false);
-        return false;
+        // User is created in auth, but profile creation failed.
+        // setLoading(false) will be handled by onAuthStateChange eventually,
+        // but for immediate feedback or retry, consider setting it here too.
+        // For now, onAuthStateChange will still pick up the auth user.
+        // If profile creation failed, the role specific caption might be an issue.
+        // Let's set a generic caption and rely on onAuthStateChange to populate user for the other useEffect.
+        setPostAuthCaption("Registration successful, setting up profile...");
+        return false; // Indicate profile creation failure
       }
 
       if (role === 'owner') {
@@ -178,23 +205,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    setLoading(true); // Indicate start of logout process
+    setLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error("Supabase logout error:", error.message);
-        // Even if there's an error, we should proceed to clear client state
       }
     } catch (e) {
-      // Catch any unexpected errors during sign out
       console.error("Exception during Supabase signout:", e);
     } finally {
-      // These actions should happen regardless of signout success/failure
-      // to ensure client state is reset and user is redirected.
       setUser(null);
       setPostAuthCaption(null);
       router.push("/login");
-      setLoading(false); // Update loading state after client-side operations are done
+      setLoading(false); 
     }
   };
 
@@ -247,3 +270,4 @@ export const useAuth = () => {
   }
   return context;
 };
+
