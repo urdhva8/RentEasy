@@ -94,32 +94,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (user && !loading && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
-      if (postAuthCaption === "Logging in...") {
-        if (user.role === 'owner') {
-          setPostAuthCaption("Turn your property into profit — the easy way.");
-        } else if (user.role === 'tenant') {
-          setPostAuthCaption("Your perfect rental, just a click away");
-        } else {
-          setPostAuthCaption("Welcome to RentEasy!");
-        }
+    if (user && !loading && postAuthCaption === "Logging in...") {
+      if (user.role === 'owner') {
+        setPostAuthCaption("Turn your property into profit — the easy way.");
+      } else if (user.role === 'tenant') {
+        setPostAuthCaption("Your perfect rental, just a click away");
       }
     }
-  }, [user, loading, pathname, postAuthCaption]);
+  }, [user, loading, postAuthCaption]);
 
 
   useEffect(() => {
-    if (postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
-      const timer = setTimeout(() => {
-        setPostAuthCaption(null);
-        router.push("/dashboard");
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (postAuthCaption) {
+        const timer = setTimeout(() => {
+            setPostAuthCaption(null);
+            router.push("/dashboard");
+        }, 2000);
+        return () => clearTimeout(timer);
     }
-    else if (!loading && !postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
-      router.push("/dashboard");
-    }
-  }, [user, loading, pathname, router, postAuthCaption]);
+  }, [postAuthCaption, router]);
 
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -161,23 +154,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (authData.user) {
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          // id is NOT explicitly set here, relying on db default auth.uid()
-          name,
-          email,
-          role,
-          phone_number: phoneNumber || null,
-          profile_image_url: null,
-        });
-
-      if (profileError) {
-        console.error("Error creating user profile in Supabase:", profileError.message);
-        setPostAuthCaption("Registration successful, profile data pending..."); 
-        return false; 
-      }
-      
+       // Profile creation is now handled by a trigger in Supabase.
+      // We just set the appropriate login caption.
       if (role === 'owner') {
           setPostAuthCaption("Turn your property into profit — the easy way.");
       } else {
@@ -190,7 +168,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    setLoading(true); 
+    setLoading(true);
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -276,7 +254,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isOwner = user?.role === 'owner';
   const isTenant = user?.role === 'tenant';
 
-  if (postAuthCaption && user && (pathname.startsWith('/login') || pathname.startsWith('/register'))) {
+  if (postAuthCaption) {
     return <FullScreenCaption text={postAuthCaption} />;
   }
 
@@ -298,4 +276,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
