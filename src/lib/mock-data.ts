@@ -79,7 +79,7 @@ export function saveMockInterests() {
 
 // Functions to modify mock data (simulating backend)
 export const addProperty = (property: Property) => {
-  MOCK_PROPERTIES.push(property);
+  MOCK_PROPERTIES.unshift(property); // Changed from push to unshift
   saveMockProperties();
 };
 

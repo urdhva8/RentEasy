@@ -16,7 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { ImageUploader } from "./image-uploader";
-import { useState, useCallback } from "react"; // Added useCallback
+import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { addProperty } from "@/lib/mock-data"; 
 import { useRouter } from "next/navigation";
@@ -33,6 +33,54 @@ const propertySchema = z.object({
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
+
+/**
+ * Resizes and compresses an image file on the client-side.
+ * @param file The image file to process.
+ * @param maxWidth The maximum width of the output image.
+ * @param maxHeight The maximum height of the output image.
+ * @returns A Promise that resolves with a Base64-encoded data URL of the resized image.
+ */
+const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round(height * (maxWidth / width));
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round(width * (maxHeight / height));
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        return reject(new Error("Failed to get canvas context."));
+      }
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(img.src); // Clean up blob URL
+
+      // Get the data URL with compression (JPEG is best for photos)
+      resolve(canvas.toDataURL("image/jpeg", 0.85)); 
+    };
+    img.onerror = (error) => {
+      URL.revokeObjectURL(img.src);
+      reject(error);
+    };
+  });
+};
+
 
 export function AddPropertyForm() {
   const { user } = useAuth();
@@ -55,7 +103,7 @@ export function AddPropertyForm() {
 
   const handleImagesChange = useCallback((files: File[]) => {
     setImageFiles(files);
-  }, []); // Empty dependency array means this function reference is stable
+  }, []);
 
   async function onSubmit(data: PropertyFormValues) {
     if (!user || user.role !== "owner") {
@@ -69,19 +117,8 @@ export function AddPropertyForm() {
     if (imageFiles.length > 0) {
       setIsProcessingImages(true); 
       imageUrls = await Promise.all(
-        imageFiles.map(file => {
-          return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              resolve(reader.result as string);
-            };
-            reader.onerror = (error) => {
-              console.error("File reading error:", error);
-              reject(new Error(`Failed to read file: ${file.name}`));
-            };
-            reader.readAsDataURL(file);
-          });
-        })
+        // Use the resizeImage function instead of FileReader
+        imageFiles.map(file => resizeImage(file, 1280, 1280))
       ).catch(error => {
         console.error("Error processing files:", error);
         toast({
