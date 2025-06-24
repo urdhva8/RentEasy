@@ -11,6 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquareOff } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 // Interface for the resolved params object from the route
 interface ResolvedRouteParams {
   id: string;

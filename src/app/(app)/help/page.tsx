@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Send } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 
+export const dynamic = 'force-dynamic';
+
 export default function HelpPage() {
   const [query, setQuery] = useState("");
   const { toast } = useToast();

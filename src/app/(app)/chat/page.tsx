@@ -10,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquareOff } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default function ChatListPage() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
