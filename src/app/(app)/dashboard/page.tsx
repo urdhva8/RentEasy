@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { List, PlusCircle, MessageSquare } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   const { user, isOwner, isTenant } = useAuth();
 
