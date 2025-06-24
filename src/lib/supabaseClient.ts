@@ -1,4 +1,4 @@
-import type { Database } from '@/types/supabase'; // Adjust this path if your generated types are elsewhere
+import type { Database } from '@/types/supabase';
 import { createClient } from '@supabase/supabase-js';
 
 // IMPORTANT:
@@ -13,11 +13,15 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl) {
+// During production builds, environment variables might not be available.
+// We only want to throw an error in development if they are missing.
+if (!supabaseUrl && process.env.NODE_ENV === 'development') {
   throw new Error("Supabase URL not found. Did you forget to add NEXT_PUBLIC_SUPABASE_URL to your .env.local file?");
 }
-if (!supabaseAnonKey) {
+if (!supabaseAnonKey && process.env.NODE_ENV === 'development') {
   throw new Error("Supabase anon key not found. Did you forget to add NEXT_PUBLIC_SUPABASE_ANON_KEY to your .env.local file?");
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+// We provide fallback empty strings for the build process, 
+// as the actual environment variables will be available at runtime.
+export const supabase = createClient<Database>(supabaseUrl || '', supabaseAnonKey || '');
