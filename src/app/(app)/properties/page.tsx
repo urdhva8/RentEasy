@@ -5,6 +5,8 @@ import { MOCK_PROPERTIES } from "@/lib/mock-data";
 import { useEffect, useState } from "react";
 import type { Property } from "@/types";
 
+export const dynamic = 'force-dynamic';
+
 export default function BrowsePropertiesPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
