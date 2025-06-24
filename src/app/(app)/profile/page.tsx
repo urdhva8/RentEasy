@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input"; 
 import Link from "next/link"; // Added Link
 
+export const dynamic = 'force-dynamic';
+
 export default function ProfilePage() {
   const { user, updateProfileImage } = useAuth();
   const { toast } = useToast();

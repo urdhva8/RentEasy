@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { PlusCircle } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default function MyListingsPage() {
   const { user } = useAuth();
   const [myProperties, setMyProperties] = useState<Property[]>([]);
