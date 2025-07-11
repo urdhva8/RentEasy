@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/contexts/auth-context";
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default function DashboardPage() {
   const { user, isOwner, isTenant } = useAuth();
 
-  if (!user) return null; // Or a loading state
+  if (!user) return null;
 
   return (
     <div className="space-y-8">

@@ -7,18 +7,18 @@ export interface User {
   name: string;
   role: UserRole;
   phoneNumber?: string;
-  profileImageUrl?: string; // Added for profile image
+  profileImageUrl?: string;
 }
 
 export interface Property {
   id: string;
   ownerId: string;
-  ownerName: string; // Added for display
+  ownerName: string;
   name: string; 
   address: string;
   price: number;
   description: string;
-  images: string[]; // URLs of images or base64 strings for new uploads
+  images: string[];
 }
 
 export interface ChatMessage {
@@ -27,7 +27,7 @@ export interface ChatMessage {
   senderId: string;
   senderName: string;
   text: string;
-  timestamp: number; // Use number for Date.now()
+  timestamp: number;
 }
 
 export interface Interest {
@@ -42,18 +42,18 @@ export interface Interest {
 export interface ChatConversationParticipant {
   userId: string;
   name: string;
-  profileImageUrl?: string; // Added for participant's profile image
+  profileImageUrl?: string;
 }
 
 export interface ChatConversation {
-  id: string; // propertyId-tenantId
+  id: string;
   propertyId: string;
   propertyName: string;
   tenantId: string;
   tenantName: string;
   ownerId: string;
   ownerName: string;
-  participants: ChatConversationParticipant[]; // Updated to use the new type
+  participants: ChatConversationParticipant[];
   lastMessage?: ChatMessage;
   messages: ChatMessage[];
 }

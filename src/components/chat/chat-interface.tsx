@@ -37,7 +37,7 @@ export function ChatInterface({ conversationId, currentUser }: ChatInterfaceProp
     if (newMessage.trim() === "" || !conversation) return;
 
     const message: ChatMessage = {
-      id: String(Date.now()) + currentUser.id.slice(0,5), // Slightly more unique ID
+      id: String(Date.now()) + currentUser.id.slice(0,5),
       chatId: conversation.id,
       senderId: currentUser.id,
       senderName: currentUser.name,
@@ -45,10 +45,9 @@ export function ChatInterface({ conversationId, currentUser }: ChatInterfaceProp
       timestamp: Date.now(),
     };
     
-    // Update local mock data which should also update localStorage via saveMockChatConversations
     const updatedConv = addChatMessage(conversation.id, message);
     if (updatedConv) {
-        setConversation(updatedConv); // Use the returned updated conversation
+        setConversation(updatedConv);
     }
     
     setNewMessage("");

@@ -5,25 +5,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 96%; /* #F5F5F5 Light Grey */
-    --foreground: 0 0% 20%; /* #333333 Charcoal */
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 0 0% 20%; /* Charcoal on card */
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 0 0% 20%; /* Charcoal on popover */
-    --primary: 189 100% 28%; /* #007C91 Teal Blue */
-    --primary-foreground: 0 0% 98%; /* White-ish on primary */
-    --secondary: 180 10% 94%; /* Very light cool grey for subtle backgrounds */
-    --secondary-foreground: 0 0% 20%; /* Charcoal on secondary */
-    --muted: 180 10% 90%; /* Slightly darker muted grey */
-    --muted-foreground: 0 0% 40%; /* Medium grey text on muted */
-    --accent: 45 90% 57%; /* #F4C430 Warm Yellow */
-    --accent-foreground: 0 0% 20%; /* Charcoal on accent */
-    --destructive: 0 100% 71%; /* #FF6B6B Soft Coral */
-    --destructive-foreground: 0 0% 98%; /* White-ish on destructive */
+    --background: 0 0% 96%;
+    --foreground: 0 0% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+    --primary: 189 100% 28%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 180 10% 94%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 180 10% 90%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 45 90% 57%;
+    --accent-foreground: 0 0% 20%;
+    --destructive: 0 100% 71%;
+    --destructive-foreground: 0 0% 98%;
     --border: 0 0% 88%;
     --input: 0 0% 88%;
-    --ring: 189 100% 28%; /* Primary Teal for focus rings */
+    --ring: 189 100% 28%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
@@ -33,25 +33,25 @@
   }
 
   .dark {
-    --background: 240 10% 2%; /* Very Dark (near black) */
-    --foreground: 0 0% 98%; /* White-ish text */
-    --card: 240 5% 15%; /* Dark Grey (for navbar, cards) */
-    --card-foreground: 0 0% 98%; /* White-ish text on dark grey cards */
+    --background: 240 10% 2%;
+    --foreground: 0 0% 98%;
+    --card: 240 5% 15%;
+    --card-foreground: 0 0% 98%;
     --popover: 240 5% 15%;
     --popover-foreground: 0 0% 98%;
-    --primary: 189 100% 40%; /* Brighter Teal Blue for dark mode */
-    --primary-foreground: 0 0% 98%; /* White-ish text on dark primary */
-    --secondary: 240 5% 20%; /* Slightly lighter dark grey for subtle dark backgrounds */
-    --secondary-foreground: 0 0% 90%; /* Lighter text on dark secondary */
-    --muted: 240 5% 10%; /* Darker muted grey */
-    --muted-foreground: 240 5% 65%; /* Medium grey text on dark muted */
-    --accent: 45 85% 50%; /* Adjusted Warm Yellow for dark mode */
-    --accent-foreground: 0 0% 10%; /* Darker Charcoal/Black on dark accent */
-    --destructive: 0 90% 65%; /* Adjusted Soft Coral for dark mode */
-    --destructive-foreground: 0 0% 98%; /* White-ish text on dark destructive */
+    --primary: 189 100% 40%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 5% 20%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 240 5% 10%;
+    --muted-foreground: 240 5% 65%;
+    --accent: 45 85% 50%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 90% 65%;
+    --destructive-foreground: 0 0% 98%;
     --border: 240 5% 25%;
     --input: 240 5% 25%;
-    --ring: 189 100% 40%; /* Dark Primary Teal for focus rings */
+    --ring: 189 100% 40%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -70,7 +70,6 @@
   }
 }
 
-/* Custom gradient button style */
 .btn-gradient-primary {
   @apply bg-gradient-to-r from-[hsl(var(--primary)/0.9)] to-[hsl(var(--primary))] text-primary-foreground hover:opacity-90 transition-opacity;
 }
@@ -79,9 +78,8 @@
  @apply bg-accent text-accent-foreground hover:bg-accent/90;
 }
 
-/* Ensure form inputs use Montserrat (mapped to font-code) */
 input.font-code, textarea.font-code, select.font-code {
-  font-family: var(--font-code); /* Ensure this is defined in tailwind.config.ts */
+  font-family: var(--font-code);
   font-weight: 600;
 }
 label.font-code {

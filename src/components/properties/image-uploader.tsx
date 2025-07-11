@@ -10,13 +10,13 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface ImageUploaderProps {
   onImagesChange: (files: File[]) => void;
-  initialImageUrls?: string[]; // For editing existing properties
+  initialImageUrls?: string[];
 }
 
 interface PreviewImage {
-  id: string; // Unique ID for key prop
-  url: string; // blob: URL for new files, http/data for initial
-  file?: File; // Original File object for new uploads
+  id: string;
+  url: string;
+  file?: File;
   isInitial: boolean;
 }
 
@@ -24,37 +24,27 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Effect to synchronize initialImageUrls prop with the 'isInitial' part of previewImages state
   useEffect(() => {
     setPreviewImages(currentPreviewImages => {
-      // If initialImageUrls is empty and there are user-selected (non-initial) files in currentPreviewImages,
-      // then we don't change anything. This preserves the user's selection if the parent re-renders
-      // and passes a new empty array reference for initialImageUrls.
       if (initialImageUrls.length === 0 && currentPreviewImages.some(p => !p.isInitial)) {
-        return currentPreviewImages; // No change needed
+        return currentPreviewImages;
       }
 
-      // Calculate new initial previews based on the prop
       const newInitialPreviewsFromProp: PreviewImage[] = initialImageUrls.map((url, index) => ({
-        id: `initial-${index}-${url}`, // Use URL in ID for better stability
+        id: `initial-${index}-${url}`,
         url: url,
         isInitial: true,
       }));
 
-      // Get existing user-added (non-initial) files from the current state
       const currentUserAddedPreviews = currentPreviewImages.filter(p => !p.isInitial);
-      // Get existing initial previews from the current state
       const currentInitialPreviewsInState = currentPreviewImages.filter(p => p.isInitial);
 
-      // Determine if the initial part of the state actually needs to be updated
       let initialPartNeedsUpdate = newInitialPreviewsFromProp.length !== currentInitialPreviewsInState.length;
       if (!initialPartNeedsUpdate && newInitialPreviewsFromProp.length > 0) {
-        // If lengths are the same and not zero, check if content is different
         initialPartNeedsUpdate = newInitialPreviewsFromProp.some((newP, i) =>
           newP.id !== currentInitialPreviewsInState[i]?.id || newP.url !== currentInitialPreviewsInState[i]?.url
         );
       } else if (!initialPartNeedsUpdate && newInitialPreviewsFromProp.length === 0 && currentInitialPreviewsInState.length > 0) {
-        // If new initial is empty, but old initial had items, it needs update (to empty initial)
         initialPartNeedsUpdate = true;
       }
 
@@ -62,13 +52,11 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
       if (initialPartNeedsUpdate) {
         return [...newInitialPreviewsFromProp, ...currentUserAddedPreviews];
       } else {
-        // If the initial part doesn't need an update, return the current state as is.
-        return currentPreviewImages; // No change needed
+        return currentPreviewImages;
       }
     });
-  }, [initialImageUrls]); // This effect depends only on the initialImageUrls prop.
+  }, [initialImageUrls]);
 
-  // Effect to notify parent when the list of actual (non-initial) files changes
   useEffect(() => {
     const newFiles = previewImages
       .filter(p => !p.isInitial && p.file)
@@ -87,9 +75,6 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
 
     setPreviewImages(prev => {
       const existingInitialPreviews = prev.filter(p => p.isInitial);
-      // Filter out any existing non-initial previews that might be duplicates of new files.
-      // A more robust duplicate check might compare file name, size, and lastModified.
-      // For simplicity, we filter existing new files if a new file with the same name is added.
       const existingNewFilePreviews = prev.filter(p => 
         !p.isInitial && !newFilePreviews.some(nf => nf.file?.name === p.file?.name)
       );
@@ -175,6 +160,7 @@ export function ImageUploader({ onImagesChange, initialImageUrls = [] }: ImageUp
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
                   style={{ objectFit: "cover" }} 
                   className="rounded-md"
+                  data-ai-hint="apartment interior"
                 />
                 <Button
                   variant="destructive"

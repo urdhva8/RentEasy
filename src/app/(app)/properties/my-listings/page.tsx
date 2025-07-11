@@ -19,7 +19,6 @@ export default function MyListingsPage() {
 
   useEffect(() => {
     if (user) {
-      // Simulate fetching owner's properties
       const filteredProperties = MOCK_PROPERTIES.filter(p => p.ownerId === user.id);
       setMyProperties(filteredProperties);
     }
@@ -27,15 +26,12 @@ export default function MyListingsPage() {
   }, [user]);
 
   const handleDeleteProperty = (propertyId: string) => {
-    // This would typically be an API call
-    // For mock data, filter out the property
     const updatedProperties = MOCK_PROPERTIES.filter(p => p.id !== propertyId);
     
-    // Update MOCK_PROPERTIES array
-    MOCK_PROPERTIES.length = 0; // Clear array
-    Array.prototype.push.apply(MOCK_PROPERTIES, updatedProperties); // Re-populate
+    MOCK_PROPERTIES.length = 0;
+    Array.prototype.push.apply(MOCK_PROPERTIES, updatedProperties);
     
-    saveMockProperties(); // Persist changes to localStorage
+    saveMockProperties();
     
     setMyProperties(prev => prev.filter(p => p.id !== propertyId));
   };

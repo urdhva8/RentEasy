@@ -1,5 +1,5 @@
 
-"use client"; // Required for useState and useEffect
+"use client";
 
 import { ReactNode, useEffect, useState } from "react";
 

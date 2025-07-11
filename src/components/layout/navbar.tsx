@@ -38,7 +38,7 @@ const NavItemLink = ({ href, label, icon: Icon, isActive, isSheet = false }: Nav
     isActive
       ? "text-primary font-semibold bg-accent/10"
       : "text-foreground",
-    isSheet && "w-full justify-start text-base py-3" // Specific styles for sheet items
+    isSheet && "w-full justify-start text-base py-3"
   );
 
   if (isSheet) {
@@ -75,7 +75,7 @@ export function Navbar() {
     { href: "/help", label: "Help", icon: HelpCircle, roles: ["owner", "tenant"] },
   ];
 
-  if (!user) return null; // Or some loading state if user is not yet available
+  if (!user) return null;
 
   const activeUserNavItems = navItems.filter(item => item.roles.includes(user.role));
 
@@ -85,7 +85,6 @@ export function Navbar() {
         <div className="flex items-center justify-between min-h-[5rem] py-2">
           <RentEaseLogo />
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center flex-wrap justify-end gap-x-1 sm:gap-x-2 md:gap-x-4 gap-y-1">
             {activeUserNavItems.map((item) => (
               <NavItemLink
@@ -106,7 +105,6 @@ export function Navbar() {
             </Button>
           </div>
 
-          {/* Mobile Navigation Trigger */}
           <div className="md:hidden">
             <Sheet>
               <SheetTrigger asChild>

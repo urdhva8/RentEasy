@@ -17,7 +17,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }, [user, loading, router]);
 
   if (loading || !user) {
-    // Optional: show a loading spinner or a blank page while redirecting
     return (
         <div className="flex items-center justify-center min-h-screen bg-background dark">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { use, useEffect, useState } from 'react'; // Added use
+import { use, useEffect, useState } from 'react';
 import { ChatInterface } from "@/components/chat/chat-interface";
 import { ChatListItem } from "@/components/chat/chat-list-item";
 import { useAuth } from "@/contexts/auth-context";
@@ -13,13 +13,10 @@ import { MessageSquareOff } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
-// Interface for the resolved params object from the route
 interface ResolvedRouteParams {
   id: string;
 }
 
-// Props for the ChatPage component.
-// The 'params' object itself (which contains the route parameters like 'id') is a Promise.
 interface ChatPageProps {
   params: Promise<ResolvedRouteParams>;
 }
@@ -27,7 +24,6 @@ interface ChatPageProps {
 export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
   const { user } = useAuth();
   
-  // React.use() unwraps the promise passed by Next.js for route parameters.
   const routeParams = use(paramsPromise);
   const conversationId = routeParams.id;
 
@@ -40,7 +36,7 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
         ).sort((a, b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
         setConversationsForSidebar(filteredConversations);
     } else {
-        setConversationsForSidebar([]); // Clear if user logs out or is not available
+        setConversationsForSidebar([]);
     }
   }, [user]);
 
@@ -55,7 +51,6 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar for chat list - hidden on smaller screens when a chat is open */}
       <Card className="hidden md:block md:w-1/3 lg:w-1/4 border-r shadow-lg flex flex-col">
         <CardHeader className="sticky top-0 bg-card z-10 border-b">
           <CardTitle className="font-headline text-2xl text-primary">Conversations</CardTitle>
@@ -81,7 +76,6 @@ export default function ChatPage({ params: paramsPromise }: ChatPageProps) {
         </CardContent>
       </Card>
 
-      {/* Main chat interface */}
       <div className="flex-1">
         <ChatInterface conversationId={conversationId} currentUser={user} />
       </div>

@@ -60,7 +60,7 @@ export function EditProfileForm() {
     setIsLoading(true);
     const success = await updateUserProfileData({
         name: data.name,
-        phoneNumber: data.phoneNumber || undefined, // Send undefined if empty to clear it
+        phoneNumber: data.phoneNumber || undefined,
     });
 
     if (success) {
@@ -89,8 +89,6 @@ export function EditProfileForm() {
   }
   
   if (!user) {
-    // This case should ideally be handled by a layout or higher-order component
-    // redirecting to login if user is not authenticated.
     return <p className="text-center font-body">Please log in to edit your profile.</p>;
   }
 

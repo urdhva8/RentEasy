@@ -66,10 +66,11 @@ export function PropertyCard({ property, isOwnerView = false, onDelete }: Proper
                 <CarouselItem key={index}>
                   <div className="relative aspect-video w-full">
                     <Image
-                      src={img.startsWith('data:') ? img : `https://placehold.co/600x400.png?text=Property+Image+${index+1}`}
+                      src={img}
                       alt={`${property.name} - Image ${index + 1}`}
                       layout="fill"
                       objectFit="cover"
+                      data-ai-hint="apartment building"
                     />
                   </div>
                 </CarouselItem>
@@ -85,10 +86,11 @@ export function PropertyCard({ property, isOwnerView = false, onDelete }: Proper
         ) : (
           <div className="relative aspect-video w-full bg-muted flex items-center justify-center">
              <Image
-                src="https://placehold.co/600x400.png?text=No+Image"
+                src="https://placehold.co/600x400.png"
                 alt="No image available"
                 layout="fill"
                 objectFit="cover"
+                data-ai-hint="apartment building"
               />
           </div>
         )}

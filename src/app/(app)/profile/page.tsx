@@ -5,11 +5,11 @@ import { useAuth } from "@/contexts/auth-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { UserCircle2, UploadCloud, Edit } from "lucide-react"; // Added Edit icon
+import { UserCircle2, UploadCloud, Edit } from "lucide-react";
 import React, { useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input"; 
-import Link from "next/link"; // Added Link
+import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 

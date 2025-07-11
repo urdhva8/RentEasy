@@ -1,20 +1,17 @@
 
 import type { User, Property, ChatConversation, ChatMessage, Interest } from "@/types";
 
-// --- Generic LocalStorage Helper ---
 function loadFromLocalStorage<T>(key: string, defaultValue: T[]): T[] {
   if (typeof window !== 'undefined') {
     const storedValue = localStorage.getItem(key);
     if (storedValue) {
       try {
         const parsed = JSON.parse(storedValue);
-        // Basic check to ensure it's an array, could be more robust
         if (Array.isArray(parsed)) {
           return parsed;
         }
       } catch (e) {
         console.error(`Failed to parse ${key} from localStorage`, e);
-        // Fallback to default if parsing fails
       }
     }
   }
@@ -69,17 +66,15 @@ export function saveMockChatConversations() {
 }
 
 
-const DEFAULT_MOCK_INTERESTS: Interest[] = []; // No default interests
+const DEFAULT_MOCK_INTERESTS: Interest[] = [];
 const MOCK_INTERESTS_STORAGE_KEY = 'renteasy_mock_interests_list';
 export let MOCK_INTERESTS: Interest[] = loadFromLocalStorage<Interest>(MOCK_INTERESTS_STORAGE_KEY, DEFAULT_MOCK_INTERESTS);
 export function saveMockInterests() {
   saveToLocalStorage<Interest>(MOCK_INTERESTS_STORAGE_KEY, MOCK_INTERESTS);
 }
 
-
-// Functions to modify mock data (simulating backend)
 export const addProperty = (property: Property) => {
-  MOCK_PROPERTIES.unshift(property); // Changed from push to unshift
+  MOCK_PROPERTIES.unshift(property);
   saveMockProperties();
 };
 
@@ -139,18 +134,14 @@ export const getOrCreateChatConversation = (
   let conversationToReturn: ChatConversation;
 
   if (existingConversationIndex !== -1) {
-    // Conversation exists
     conversationToReturn = MOCK_CHAT_CONVERSATIONS[existingConversationIndex];
 
-    // If it's not already at the top, move it
     if (existingConversationIndex > 0) {
-      MOCK_CHAT_CONVERSATIONS.splice(existingConversationIndex, 1); // Remove from current position
-      MOCK_CHAT_CONVERSATIONS.unshift(conversationToReturn); // Add to the beginning
-      saveMockChatConversations(); // Save because order changed
+      MOCK_CHAT_CONVERSATIONS.splice(existingConversationIndex, 1);
+      MOCK_CHAT_CONVERSATIONS.unshift(conversationToReturn);
+      saveMockChatConversations();
     }
-    // If it was already at index 0, no change in order, no save needed here for order.
   } else {
-    // Conversation does not exist, create a new one
     conversationToReturn = {
       id: chatId,
       propertyId,
@@ -164,10 +155,9 @@ export const getOrCreateChatConversation = (
         { userId: tenantId, name: tenantName, profileImageUrl: MOCK_USERS.find(u => u.id === tenantId)?.profileImageUrl },
       ],
       messages: [],
-      // lastMessage will be updated when a message is added
     };
-    MOCK_CHAT_CONVERSATIONS.unshift(conversationToReturn); // Add to the beginning
-    saveMockChatConversations(); // Save because new conversation added
+    MOCK_CHAT_CONVERSATIONS.unshift(conversationToReturn);
+    saveMockChatConversations();
   }
   return conversationToReturn;
 };

@@ -35,7 +35,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Check for a logged-in user in localStorage on initial load
     const storedUserId = typeof window !== 'undefined' ? localStorage.getItem('loggedInUserId') : null;
     if (storedUserId) {
       const foundUser = MOCK_USERS.find(u => u.id === storedUserId);
@@ -68,7 +67,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setLoading(true);
-    // Simulate network delay
     await new Promise(res => setTimeout(res, 500));
     
     const foundUser = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -91,7 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     if (MOCK_USERS.some(u => u.email.toLowerCase() === email.toLowerCase())) {
         setLoading(false);
-        return false; // Email already exists
+        return false;
     }
 
     const newUser: User = {
@@ -175,7 +173,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return <FullScreenCaption text={postAuthCaption} />;
   }
 
-  // This check is important for routing and preventing access to protected pages
   if (loading && !pathname.startsWith('/login') && !pathname.startsWith('/register')) {
      return <LoadingScreen />;
   }

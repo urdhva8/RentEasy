@@ -19,10 +19,9 @@ export default function ChatListPage() {
 
   useEffect(() => {
     if (user) {
-      // Filter conversations where the current user is a participant
       const userConversations = MOCK_CHAT_CONVERSATIONS.filter(convo => 
         convo.participants.some(p => p.userId === user.id)
-      ).sort((a,b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0)); // Sort by most recent
+      ).sort((a,b) => (b.lastMessage?.timestamp || 0) - (a.lastMessage?.timestamp || 0));
       setConversations(userConversations);
     }
     setLoading(false);
@@ -36,7 +35,7 @@ export default function ChatListPage() {
     );
   }
   
-  if (!user) return null; // Should be handled by AppLayout
+  if (!user) return null;
 
   return (
     <div className="flex h-full">
@@ -53,7 +52,7 @@ export default function ChatListPage() {
                   key={convo.id} 
                   conversation={convo} 
                   currentUserId={user.id}
-                  isActive={false} // No active chat concept on this page currently
+                  isActive={false}
                 />
               ))
             ) : (

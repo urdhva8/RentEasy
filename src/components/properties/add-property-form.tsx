@@ -34,13 +34,6 @@ const propertySchema = z.object({
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
 
-/**
- * Resizes and compresses an image file on the client-side.
- * @param file The image file to process.
- * @param maxWidth The maximum width of the output image.
- * @param maxHeight The maximum height of the output image.
- * @returns A Promise that resolves with a Base64-encoded data URL of the resized image.
- */
 const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -69,9 +62,8 @@ const resizeImage = (file: File, maxWidth: number, maxHeight: number): Promise<s
       }
       
       ctx.drawImage(img, 0, 0, width, height);
-      URL.revokeObjectURL(img.src); // Clean up blob URL
+      URL.revokeObjectURL(img.src);
 
-      // Get the data URL with compression (JPEG is best for photos)
       resolve(canvas.toDataURL("image/jpeg", 0.85)); 
     };
     img.onerror = (error) => {
@@ -117,7 +109,6 @@ export function AddPropertyForm() {
     if (imageFiles.length > 0) {
       setIsProcessingImages(true); 
       imageUrls = await Promise.all(
-        // Use the resizeImage function instead of FileReader
         imageFiles.map(file => resizeImage(file, 1280, 1280))
       ).catch(error => {
         console.error("Error processing files:", error);
@@ -144,7 +135,7 @@ export function AddPropertyForm() {
       ownerId: user.id,
       ownerName: user.name,
       ...data,
-      images: imageUrls && imageUrls.length > 0 ? imageUrls : ["https://placehold.co/600x400.png?text=No+Image+Provided"],
+      images: imageUrls && imageUrls.length > 0 ? imageUrls : ["https://placehold.co/600x400.png"],
     };
 
     addProperty(newProperty); 

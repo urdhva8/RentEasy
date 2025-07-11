@@ -1,3 +1,4 @@
+
 "use client";
 
 import { PropertyList } from "@/components/properties/property-list";
@@ -12,7 +13,6 @@ export default function BrowsePropertiesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching data
     setProperties(MOCK_PROPERTIES);
     setLoading(false);
   }, []);
