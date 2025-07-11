@@ -4,13 +4,13 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/toaster";
 
-const reactLogoSvgDataUri = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-11.5 -10.23174 23 20.46348%22><title>React Logo</title><circle cx=%220%22 cy=%220%22 r=%222.05%22 fill=%22%2361dafb%22/><g stroke=%22%2361dafb%22 stroke-width=%221%22 fill=%22none%22><ellipse rx=%2211%22 ry=%224.2%22/><ellipse rx=%2211%22 ry=%224.2%22 transform=%22rotate(60)%22/><ellipse rx=%2211%22 ry=%224.2%22 transform=%22rotate(120)%22/></g></svg>";
+const reactLogoPngDataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARAAAAEQAQMAAABLA0GnAAAABlBMVEUAIABfX1/o7AatAAAAAXRSTlMAQObYZgAAAI5JREFUeNpjYBgFo2AUjIJRMApGwSigcwFGBq4A8T8kASvYn1B7+J8hxn8g9H9wSAyQAFjsv3E+QPwPy4Bx/A+L/x+W/h8s/4/k/s/S/yP5/zP9/zP//zP+/zP//zOABGBaGv+P5f8Pmf8fsv8/Ev8/Av8/gvA/gtA/Atk/QNk/QOWfAPVPAfVPAfVPAQXUAAAAASUVORK5CYII=";
 
 export const metadata: Metadata = {
   title: "RentEasy",
   description: "Find your next rental easily with RentEasy",
   icons: {
-    icon: reactLogoSvgDataUri,
+    icon: reactLogoPngDataUri,
   },
 };
 
@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Forcefully setting the favicon with a link tag to override environment defaults */}
-        <link rel="icon" href={reactLogoSvgDataUri} />
+        <link rel="icon" href={reactLogoPngDataUri} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
