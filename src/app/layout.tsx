@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 export const metadata: Metadata = {
   title: "RentEasy",
   description: "Find your next rental easily with RentEasy",
-  icons: null, // Explicitly try to disable default icons via metadata
+  icons: "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-11.5 -10.23174 23 20.46348%22><title>React Logo</title><circle cx=%220%22 cy=%220%22 r=%222.05%22 fill=%22%2361dafb%22/><g stroke=%22%2361dafb%22 stroke-width=%221%22 fill=%22none%22><ellipse rx=%2211%22 ry=%224.2%22/><ellipse rx=%2211%22 ry=%224.2%22 transform=%22rotate(60)%22/><ellipse rx=%2211%22 ry=%224.2%22 transform=%22rotate(120)%22/></g></svg>",
 };
 
 export default function RootLayout({
@@ -18,8 +18,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Attempt to force a blank favicon */}
-        <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+        {/* The favicon is now set in the metadata above */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet" />
